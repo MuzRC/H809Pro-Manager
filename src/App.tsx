@@ -19,7 +19,7 @@ import {
   NetworkMode,
 } from './types/modem';
 import {
-  INDONESIAN_OPERATORS,
+  MALAYSIAN_OPERATORS,
   DEFAULT_APN_LIST,
   INITIAL_SMS,
 } from './data/constants';
@@ -30,14 +30,14 @@ export default function App() {
   const [isRebootModalOpen, setIsRebootModalOpen] = useState(false);
   const [isRebooting, setIsRebooting] = useState(false);
 
-  // Initial modem status
+  // Status awal modem
   const [status, setStatus] = useState<ModemStatus>(() => {
     const saved = localStorage.getItem('h809pro_status');
     if (saved) {
       try {
         return JSON.parse(saved);
       } catch {
-        // fallback
+        // sandaran jika ralat parse
       }
     }
     return {
@@ -45,7 +45,7 @@ export default function App() {
       isConnected: true,
       connectionMode: 'simulated',
       simStatus: 'READY',
-      operator: INDONESIAN_OPERATORS[0], // Telkomsel
+      operator: MALAYSIAN_OPERATORS[0], // Tune Talk lalai
       networkType: '4G LTE',
       networkMode: 'LTE_ONLY',
       lockedBands: [1, 3],
@@ -59,7 +59,7 @@ export default function App() {
         pci: 142,
         tac: '9201',
         band: 3,
-        bandName: 'Band 3',
+        bandName: 'Jalur 3',
         frequency: '1800 MHz (FDD)',
       },
       downloadSpeed: 1840, // KB/s
@@ -73,16 +73,16 @@ export default function App() {
       wifiSsid: 'H809Pro_4G_WiFi',
       wifiSecurity: 'WPA2-PSK',
       wifiHideSsid: false,
-      wifiChannel: 'Auto (Rekomendasi)',
+      wifiChannel: 'Auto (Disyorkan)',
       maxClients: 10,
       imei: '868940051283941',
       macAddress: '7C:B0:C2:59:E4:10',
-      firmwareVersion: 'H809PRO_V4.2.1_ID_BYPASS',
+      firmwareVersion: 'H809PRO_V4.2.1_MY_BYPASS',
       hardwareVersion: 'H809-PCB-V2.0',
     };
   });
 
-  // Rolling speed sparkline history (last 20 points)
+  // Sejarah carta kelajuan (20 titik terakhir)
   const [speedHistory, setSpeedHistory] = useState<{ dl: number; ul: number }[]>([
     { dl: 1400, ul: 320 },
     { dl: 1650, ul: 380 },
@@ -91,40 +91,40 @@ export default function App() {
     { dl: 1840, ul: 420 },
   ]);
 
-  // SMS messages
+  // Peti mesej SMS
   const [messages, setMessages] = useState<SMSMessage[]>(() => {
     const saved = localStorage.getItem('h809pro_sms');
     if (saved) {
       try {
         return JSON.parse(saved);
       } catch {
-        // fallback
+        // sandaran
       }
     }
     return INITIAL_SMS;
   });
 
-  // APN Profiles
+  // Profil APN
   const [apnProfiles, setApnProfiles] = useState<APNProfile[]>(() => {
     const saved = localStorage.getItem('h809pro_apn');
     if (saved) {
       try {
         return JSON.parse(saved);
       } catch {
-        // fallback
+        // sandaran
       }
     }
     return DEFAULT_APN_LIST;
   });
 
-  // Connected Devices
+  // Senarai peranti bersambung
   const [devices, setDevices] = useState<ConnectedDevice[]>([
     {
       id: 'dev-1',
-      hostname: 'HP Redmi Note 12',
+      hostname: 'Telefon Redmi Note 12',
       ip: '192.168.100.12',
       mac: '44:85:00:23:AA:01',
-      connectedAt: '10:14 WIB',
+      connectedAt: '10:14 Pagi',
       currentDownloadSpeed: 950,
       currentUploadSpeed: 180,
       totalDataUsed: 1420,
@@ -132,10 +132,10 @@ export default function App() {
     },
     {
       id: 'dev-2',
-      hostname: 'Laptop Lenovo ThinkPad',
+      hostname: 'Komputer Riba Lenovo',
       ip: '192.168.100.15',
       mac: 'A8:64:F2:19:9C:55',
-      connectedAt: '08:30 WIB',
+      connectedAt: '08:30 Pagi',
       currentDownloadSpeed: 820,
       currentUploadSpeed: 210,
       totalDataUsed: 3850,
@@ -146,7 +146,7 @@ export default function App() {
       hostname: 'Smart TV Ruang Tamu',
       ip: '192.168.100.20',
       mac: '60:01:94:44:11:3E',
-      connectedAt: 'Kemarin',
+      connectedAt: 'Semalam',
       currentDownloadSpeed: 70,
       currentUploadSpeed: 30,
       totalDataUsed: 5200,
@@ -154,19 +154,19 @@ export default function App() {
     },
   ]);
 
-  // AT Command Logs
+  // Log Perintah AT
   const [atLogs, setAtLogs] = useState<ATCommandLog[]>([
     {
       id: 'cmd-0',
       command: 'ATI',
       response:
-        'H809Pro LTE CPE Router\nManufacturer: ASR Microelectronics\nModel: H809Pro-4G\nRevision: V4.2.1-BYPASS\nIMEI: 868940051283941\n\nOK',
+        'Penghala H809Pro LTE CPE\nPengilang: ASR Microelectronics\nModel: H809Pro-4G\nSemakan: V4.2.1-BYPASS\nIMEI: 868940051283941\n\nOK',
       timestamp: '22:40:02',
       status: 'success',
     },
   ]);
 
-  // Persist status to localStorage
+  // Simpan status dalam localStorage
   useEffect(() => {
     localStorage.setItem('h809pro_status', JSON.stringify(status));
   }, [status]);
@@ -179,19 +179,17 @@ export default function App() {
     localStorage.setItem('h809pro_apn', JSON.stringify(apnProfiles));
   }, [apnProfiles]);
 
-  // Live traffic & telemetry ticker (updates speeds & minor signal variation)
+  // Pemantau langsung trafik & telemetri isyarat
   useEffect(() => {
     if (isRebooting) return;
 
     const interval = setInterval(() => {
       setStatus((prev) => {
-        // Natural speed variation
         const dlDelta = (Math.random() - 0.48) * 300;
         const ulDelta = (Math.random() - 0.48) * 80;
         const newDl = Math.max(120, Math.min(3800, Math.round(prev.downloadSpeed + dlDelta)));
         const newUl = Math.max(40, Math.min(950, Math.round(prev.uploadSpeed + ulDelta)));
 
-        // Micro signal fluctuations (±1 dBm)
         const rsrpFluct = (Math.random() - 0.5) * 1.5;
         const newRsrp = Math.max(-115, Math.min(-62, Math.round((prev.signal.rsrp + rsrpFluct) * 10) / 10));
 
@@ -207,7 +205,6 @@ export default function App() {
         };
       });
 
-      // Update speed history
       setSpeedHistory((prev) => {
         const next = [
           ...prev.slice(1),
@@ -223,7 +220,7 @@ export default function App() {
     return () => clearInterval(interval);
   }, [isRebooting, status.downloadSpeed, status.uploadSpeed]);
 
-  // Refresh signal handler
+  // Kemas kini isyarat secara manual
   const handleRefreshSignal = () => {
     setStatus((prev) => ({
       ...prev,
@@ -236,7 +233,7 @@ export default function App() {
     }));
   };
 
-  // Reset network handler
+  // Tetapkan semula sambungan rangkaian
   const handleResetNetwork = () => {
     setStatus((prev) => ({ ...prev, downloadSpeed: 0, uploadSpeed: 0 }));
     setTimeout(() => {
@@ -248,16 +245,15 @@ export default function App() {
     }, 1200);
   };
 
-  // Band Locking Application
+  // Tetapan Kunci Jalur LTE
   const handleApplyBandConfig = (bands: number[], mode: NetworkMode) => {
-    // Pick the primary active band from the locked set
     const primaryBand = bands.includes(3) ? 3 : bands[0] || 1;
     const bandFreqMap: Record<number, { name: string; freq: string }> = {
-      1: { name: 'Band 1', freq: '2100 MHz (FDD)' },
-      3: { name: 'Band 3', freq: '1800 MHz (FDD)' },
-      5: { name: 'Band 5', freq: '850 MHz (FDD)' },
-      8: { name: 'Band 8', freq: '900 MHz (FDD)' },
-      40: { name: 'Band 40', freq: '2300 MHz (TDD)' },
+      1: { name: 'Jalur 1', freq: '2100 MHz (FDD)' },
+      3: { name: 'Jalur 3', freq: '1800 MHz (FDD)' },
+      5: { name: 'Jalur 5', freq: '850 MHz (FDD)' },
+      8: { name: 'Jalur 8', freq: '900 MHz (FDD)' },
+      40: { name: 'Jalur 40', freq: '2300 MHz (TDD)' },
     };
 
     const targetInfo = bandFreqMap[primaryBand] || bandFreqMap[3];
@@ -271,32 +267,30 @@ export default function App() {
         band: primaryBand,
         bandName: targetInfo.name,
         frequency: targetInfo.freq,
-        // Band 40 and Band 3 tend to have higher SINR & speed
         sinr: primaryBand === 40 ? 22 : primaryBand === 3 ? 19 : 14,
         rsrp: primaryBand === 40 ? -79 : primaryBand === 3 ? -82 : -88,
       },
     }));
 
-    // Add log to AT terminal
-    const timeStr = new Date().toLocaleTimeString('id-ID');
+    const timeStr = new Date().toLocaleTimeString('ms-MY');
     setAtLogs((prev) => [
       ...prev,
       {
         id: `cmd-${Date.now()}`,
         command: `AT+SETBAND=${bands.join(',')},MODE=${mode}`,
-        response: `+SETBAND: LOCKED_BANDS=[${bands.join(',')}]\n+SYSMODE: ${mode}\nOK`,
+        response: `+SETBAND: JALUR_DIKUNCI=[${bands.join(',')}]\n+SYSMODE: ${mode}\nOK`,
         timestamp: timeStr,
         status: 'success',
       },
     ]);
   };
 
-  // SMS Handlers
+  // Pengendali SMS
   const handleSendMessage = (recipient: string, text: string) => {
     const timeStr = new Date().toISOString().slice(0, 16).replace('T', ' ');
     const newMsg: SMSMessage = {
       id: `sms-${Date.now()}`,
-      sender: `Ke: ${recipient}`,
+      sender: `Kepada: ${recipient}`,
       recipient,
       timestamp: timeStr,
       content: text,
@@ -306,14 +300,14 @@ export default function App() {
 
     setMessages((prev) => [newMsg, ...prev]);
 
-    // If sent to operator shortcode, simulate reply
-    if (recipient === '363' || recipient === '234' || recipient === '995') {
+    // Simulasi balasan operator automatik
+    if (recipient === '133' || recipient === '118' || recipient === '100') {
       setTimeout(() => {
         const replyMsg: SMSMessage = {
           id: `sms-${Date.now() + 1}`,
           sender: recipient,
           timestamp: new Date().toISOString().slice(0, 16).replace('T', ' '),
-          content: `Balasan dari ${recipient}: Perintah "${text}" telah diproses. Sisa kuota aktif Anda adalah 48.2 GB berlaku 30 hari.`,
+          content: `Balasan daripada ${recipient}: Permintaan "${text}" telah berjaya diproses. Baki kuota aktif anda ialah 48.2 GB dengan tempoh sah 30 hari.`,
           isRead: false,
           folder: 'inbox',
         };
@@ -332,7 +326,7 @@ export default function App() {
     );
   };
 
-  // Wi-Fi settings update
+  // Kemas kini tetapan Wi-Fi
   const handleUpdateWifiSettings = (
     ssid: string,
     pass: string,
@@ -353,7 +347,7 @@ export default function App() {
     );
   };
 
-  // APN handlers
+  // Pengendali Profil APN
   const handleSetDefaultApn = (id: string) => {
     setApnProfiles((prev) =>
       prev.map((p) => ({
@@ -367,15 +361,15 @@ export default function App() {
     setApnProfiles((prev) => [...prev, newProfile]);
   };
 
-  // AT Command Executor
+  // Pelaksana Perintah AT
   const handleExecuteATCommand = (rawCmd: string) => {
     const cmd = rawCmd.trim().toUpperCase();
-    const timeStr = new Date().toLocaleTimeString('id-ID');
+    const timeStr = new Date().toLocaleTimeString('ms-MY');
     let response = 'OK';
     let statusType: 'success' | 'error' = 'success';
 
     if (cmd === 'ATI') {
-      response = `H809Pro LTE CPE Router\nManufacturer: ASR Microelectronics\nModel: H809Pro-4G\nFirmware: ${status.firmwareVersion}\nIMEI: ${status.imei}\nMAC: ${status.macAddress}\n\nOK`;
+      response = `Penghala H809Pro LTE CPE\nPengilang: ASR Microelectronics\nModel: H809Pro-4G\nFirmware: ${status.firmwareVersion}\nIMEI: ${status.imei}\nMAC: ${status.macAddress}\n\nOK`;
     } else if (cmd === 'AT+CSQ') {
       response = `+CSQ: ${status.signal.csq},99\n\nOK`;
     } else if (cmd === 'AT+COPS?') {
@@ -383,24 +377,24 @@ export default function App() {
     } else if (cmd === 'AT+CREG?') {
       response = `+CREG: 0,1\n\nOK`;
     } else if (cmd === 'AT^SYSINFO') {
-      response = `^SYSINFO: 2,3,0,1,1\nMode: LTE Cat-4\nService: VALID\nSIM: READY\n\nOK`;
+      response = `^SYSINFO: 2,3,0,1,1\nMod: LTE Cat-4\nPerkhidmatan: SAH\nSIM: SEDIA\n\nOK`;
     } else if (cmd === 'AT+TEMP?' || cmd === 'AT+CPUTEMP') {
-      response = `+TEMP: ${status.temperature}.2 C (SAFE)\n\nOK`;
+      response = `+TEMP: ${status.temperature}.2 C (SELAMAT)\n\nOK`;
     } else if (cmd === 'AT+CBC') {
-      response = `+CBC: 0,100,5000\nPOWER_MODE: DIRECT_USB_BYPASS\nSTATUS: ONLINE_24H\n\nOK`;
+      response = `+CBC: 0,100,5000\nMOD_KUASA: PINTASAN_USB_TERUS\nSTATUS: DALAM_TALIAN_24JAM\n\nOK`;
     } else if (cmd === 'AT+CGDCONT?') {
       const activeApn = apnProfiles.find((a) => a.isDefault) || apnProfiles[0];
       response = `+CGDCONT: 1,"${activeApn.pdpType}","${activeApn.apn}","0.0.0.0",0,0\n\nOK`;
     } else if (cmd === 'AT+RESET' || cmd === 'AT+REBOOT') {
-      response = `^SYSRESET: INITIATING REBOOT SEQUENCE...\nOK`;
+      response = `^SYSRESET: MEMULAKAN URUTAN BUT SEMULA...\nOK`;
       setTimeout(() => {
         setIsRebootModalOpen(true);
         setIsRebooting(true);
       }, 500);
     } else if (cmd.startsWith('AT+')) {
-      response = `COMMAND ACCEPTED\n+MODEM: ${cmd}\n\nOK`;
+      response = `ARAHAN DITERIMA\n+MODEM: ${cmd}\n\nOK`;
     } else {
-      response = `+CME ERROR: 100 (UNKNOWN COMMAND: "${cmd}")`;
+      response = `+CME ERROR: 100 (ARAHAN TIDAK DIKETAHUI: "${cmd}")`;
       statusType = 'error';
     }
 
@@ -416,7 +410,7 @@ export default function App() {
     ]);
   };
 
-  // Reboot Trigger
+  // But Semula
   const handleRebootTrigger = () => {
     setIsRebootModalOpen(true);
     setIsRebooting(true);
@@ -428,11 +422,11 @@ export default function App() {
     handleRefreshSignal();
   };
 
-  // Factory Reset
+  // Tetapan Semula Kilang
   const handleFactoryReset = () => {
     if (
       window.confirm(
-        'PERINGATAN: Apakah Anda yakin ingin mereset modem H809Pro ke setelan pabrik default?'
+        'AMARAN: Adakah anda pasti ingin menetapkan semula modem H809Pro ke tetapan asal kilang?'
       )
     ) {
       localStorage.removeItem('h809pro_status');
@@ -444,7 +438,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-slate-950">
-      {/* Top Navbar */}
+      {/* Bar Navigasi Atas */}
       <Navbar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -457,7 +451,7 @@ export default function App() {
         rsrp={status.signal.rsrp}
       />
 
-      {/* Main Content Viewport */}
+      {/* Paparan Kandungan Utama */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {activeTab === 'overview' && (
           <OverviewTab
@@ -532,7 +526,7 @@ export default function App() {
         )}
       </main>
 
-      {/* Gateway IP Configuration Modal */}
+      {/* Modal Konfigurasi Get Laluan IP */}
       <GatewayModal
         isOpen={isGatewayModalOpen}
         onClose={() => setIsGatewayModalOpen(false)}
@@ -546,7 +540,7 @@ export default function App() {
         }
       />
 
-      {/* Reboot Modal */}
+      {/* Modal But Semula */}
       <RebootModal
         isOpen={isRebootModalOpen}
         onConfirmReboot={() => setIsRebooting(true)}
@@ -554,18 +548,18 @@ export default function App() {
         isRebooting={isRebooting}
       />
 
-      {/* Minimalistic footer conforming to anti-slop rules */}
+      {/* Kaki Halaman */}
       <footer className="border-t border-slate-900 bg-slate-950 py-4 text-xs font-mono text-slate-500">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2">
           <div>
-            <span>H809Pro 4G LTE CPE Manager</span>
+            <span>Pengurus CPE 4G LTE H809Pro</span>
             <span className="mx-2">·</span>
-            <span>Gateway: http://{status.gatewayIp}</span>
+            <span>Get Laluan: http://{status.gatewayIp}</span>
           </div>
           <div>
-            <span>Status Bypass: 5V USB Aktif</span>
+            <span>Status Pintasan: 5V USB Aktif</span>
             <span className="mx-2">·</span>
-            <span className="text-emerald-400">Terhubung</span>
+            <span className="text-emerald-400">Bersambung</span>
           </div>
         </div>
       </footer>
