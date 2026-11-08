@@ -1,0 +1,6 @@
+{
+  "name": "H809Pro Manager",
+  "description": "Dasbor kontrol & manajemen modem 4G LTE H809Pro: Kunci frekuensi band, pantau sinyal RSRP/SINR, SMS & OTP, USSD, APN, WiFi, dan terminal AT.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
