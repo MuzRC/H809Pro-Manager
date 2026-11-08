@@ -32,7 +32,6 @@ export const GatewayModal: React.FC<GatewayModalProps> = ({
     setProbeResult(null);
 
     try {
-      // Attempt an image or fetch ping to gateway
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 2000);
 
@@ -47,12 +46,12 @@ export const GatewayModal: React.FC<GatewayModalProps> = ({
 
       setProbeResult({
         status: 'success',
-        message: `Respons terdeteksi dari http://${ipInput} (Latency: ~${elapsed}ms). Modem H809Pro dapat dijangkau.`,
+        message: `Maklum balas dikesan daripada http://${ipInput} (Kependaman: ~${elapsed}ms). Modem H809Pro berjaya dicapai.`,
       });
     } catch {
       setProbeResult({
         status: 'warn',
-        message: `Tidak dapat menjangkau http://${ipInput} secara langsung dari browser (CORS policy atau beda jaringan WiFi). Anda tetap dapat menggunakan tombol "Buka WebGUI Asli" atau mode kontrol langsung.`,
+        message: `Tidak dapat mencapai http://${ipInput} secara terus daripada pelayar (dasar sekatan CORS atau sambungan Wi-Fi berbeza). Anda masih boleh menekan 'Buka WebGUI Asal' untuk mengakses secara terus.`,
       });
     } finally {
       setIsProbing(false);
@@ -80,18 +79,18 @@ export const GatewayModal: React.FC<GatewayModalProps> = ({
         <div className="flex items-center gap-2 mb-2">
           <Globe className="w-5 h-5 text-cyan-400" />
           <h3 className="text-lg font-bold text-white tracking-tight">
-            Konfigurasi Gateway & IP Modem H809Pro
+            Konfigurasi Get Laluan & IP Modem H809Pro
           </h3>
         </div>
 
         <p className="text-xs text-slate-400 mb-5 leading-relaxed">
-          Atur alamat IP gateway default modem H809Pro Anda. Secara umum modem H809Pro menggunakan alamat IP <span className="font-mono text-cyan-300">192.168.100.1</span> atau <span className="font-mono text-cyan-300">192.168.0.1</span>.
+          Tetapkan alamat IP get laluan lalai bagi modem H809Pro anda. Kebiasaannya modem H809Pro menggunakan alamat IP <span className="font-mono text-cyan-300">192.168.100.1</span> atau <span className="font-mono text-cyan-300">192.168.0.1</span>.
         </p>
 
         <form onSubmit={handleSave} className="space-y-4">
           <div>
             <label className="block text-xs font-mono text-slate-300 mb-1.5">
-              Alamat IP Gateway Modem
+              Alamat IP Get Laluan Modem
             </label>
             <div className="flex gap-2">
               <input
@@ -109,15 +108,15 @@ export const GatewayModal: React.FC<GatewayModalProps> = ({
                 className="px-3 py-2 text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors flex items-center gap-1.5"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${isProbing ? 'animate-spin' : ''}`} />
-                <span>Uji Koneksi</span>
+                <span>Uji Sambungan</span>
               </button>
             </div>
           </div>
 
-          {/* Quick IP Presets */}
+          {/* Pratetap IP Pantas */}
           <div>
             <span className="text-[11px] font-mono text-slate-400 block mb-1">
-              Preset IP Umum:
+              Pratetap IP Biasa:
             </span>
             <div className="flex flex-wrap gap-2">
               {['192.168.100.1', '192.168.0.1', '192.168.8.1', '192.168.1.1'].map((preset) => (
@@ -154,10 +153,10 @@ export const GatewayModal: React.FC<GatewayModalProps> = ({
             </div>
           )}
 
-          {/* Mode Switcher */}
+          {/* Suis Mod Operasi */}
           <div className="pt-2 border-t border-slate-800">
             <span className="text-xs font-mono text-slate-300 block mb-2">
-              Mode Operasi Aplikasi:
+              Mod Operasi Aplikasi:
             </span>
             <div className="grid grid-cols-2 gap-2 text-xs font-mono">
               <button
@@ -171,10 +170,10 @@ export const GatewayModal: React.FC<GatewayModalProps> = ({
               >
                 <div className="font-bold flex items-center gap-1.5">
                   <Radio className="w-3.5 h-3.5" />
-                  <span>Simulator & Uji</span>
+                  <span>Simulator & Ujian</span>
                 </div>
                 <div className="text-[10px] text-slate-500 mt-0.5">
-                  Simulasi interaktif lengkap tanpa wajib terhubung WiFi modem
+                  Simulasi interaktif penuh tanpa perlu bersambung ke Wi-Fi modem
                 </div>
               </button>
 
@@ -189,22 +188,22 @@ export const GatewayModal: React.FC<GatewayModalProps> = ({
               >
                 <div className="font-bold flex items-center gap-1.5">
                   <Globe className="w-3.5 h-3.5" />
-                  <span>Live Gateway</span>
+                  <span>Get Laluan Langsung</span>
                 </div>
                 <div className="text-[10px] text-slate-500 mt-0.5">
-                  Hubungkan langsung ke IP http://{ipInput}
+                  Menghubungkan terus ke alamat IP http://{ipInput}
                 </div>
               </button>
             </div>
           </div>
 
-          {/* Credentials Info Tip */}
+          {/* Petua Log Masuk Lalai */}
           <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800/80 text-[11px] font-mono text-slate-400">
             <div className="text-slate-300 font-semibold mb-1">
-              Informasi Login Bawaan Modem H809Pro:
+              Maklumat Log Masuk Lalai Modem H809Pro:
             </div>
-            <div>Username default: <span className="text-cyan-400 font-bold">admin</span></div>
-            <div>Password default: <span className="text-cyan-400 font-bold">admin</span> atau <span className="text-cyan-400 font-bold">admin809</span></div>
+            <div>Nama pengguna: <span className="text-cyan-400 font-bold">admin</span></div>
+            <div>Kata laluan: <span className="text-cyan-400 font-bold">admin</span> atau <span className="text-cyan-400 font-bold">admin809</span></div>
           </div>
 
           <div className="flex items-center justify-between pt-3 border-t border-slate-800">
@@ -215,7 +214,7 @@ export const GatewayModal: React.FC<GatewayModalProps> = ({
               className="px-3 py-2 text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors flex items-center gap-1.5"
             >
               <ExternalLink className="w-3.5 h-3.5" />
-              <span>Buka WebGUI Asli</span>
+              <span>Buka WebGUI Asal</span>
             </a>
 
             <div className="flex gap-2">
