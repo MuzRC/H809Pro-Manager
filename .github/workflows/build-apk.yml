@@ -40,7 +40,7 @@ jobs:
           npx cap init "H809Pro Manager" "com.muz.h809pro" --web-dir dist
           npx cap add android
 
-          # Wajib: Benarkan sambungan cleartext HTTP supaya app boleh tembus IP modem 192.168.100.1
+          # Wajib: Benarkan sambungan cleartext HTTP supaya app boleh tembus IP modem 192.168.1.1
           sed -i 's/<application/<application android:usesCleartextTraffic="true"/' android/app/src/main/AndroidManifest.xml
           
           npx cap sync android
@@ -77,7 +77,7 @@ jobs:
           body: |
             ### H809Pro 4G LTE CPE Manager (Signed Release)
             - APK rasmi siap ditandatangani (*Signed Release*).
-            - Sokongan sambungan HTTP get laluan modem `192.168.100.1`.
+            - Sokongan sambungan HTTP get laluan modem `192.168.1.1`.
             - Cipset ASR Cat-4 band lock & telemetri isyarat RSRP/SINR.
             - Auto-compile melalui GitHub Actions.
           draft: false
