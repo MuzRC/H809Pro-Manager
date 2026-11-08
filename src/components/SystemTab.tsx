@@ -150,7 +150,7 @@ export const SystemTab: React.FC<SystemTabProps> = ({
 
             <div className="py-2.5 flex justify-between items-center">
               <span className="text-slate-400">IP Get Laluan Lalai:</span>
-              <span className="text-slate-200">{status.gatewayIp}</span>
+              <span className="text-slate-200 font-semibold">{status.gatewayIp}</span>
             </div>
           </div>
 
@@ -248,7 +248,7 @@ export const SystemTab: React.FC<SystemTabProps> = ({
                 <span>Tetap Semula ke Tetapan Asal Kilang</span>
               </button>
               <p className="text-[11px] text-slate-500 mt-1">
-                Mengembalikan semua tetapan APN, Wi-Fi, dan kata laluan ke tetapan asal kilang (192.168.100.1 / admin).
+                Mengembalikan semua tetapan APN, Wi-Fi, dan kata laluan ke tetapan asal kilang (192.168.1.1 / admin).
               </p>
             </div>
           </div>
