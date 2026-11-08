@@ -49,15 +49,38 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleRelease --no-daemon
 
-      - name: Sign Release APK
-        uses: r0adkll/sign-android-release@v1
+      - name: Sign & Align Release APK
         id: sign_app
-        with:
-          releaseDirectory: android/app/build/outputs/apk/release
-          signingKey: ${{ secrets.KEYSTORE_BASE64 }}
-          keyStorePassword: ${{ secrets.STORE_PASSWORD }}
-          alias: ${{ secrets.KEY_ALIAS }}
-          keyPassword: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          # Dapatkan direktori Android build-tools versi terkini di runner
+          BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -n 1)
+          echo "Menggunakan Android Build Tools: $BUILD_TOOLS_DIR"
+          
+          # Nyahkod Keystore daripada GitHub Secrets
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.keystore
+          
+          # Cari APK asal yang belum ditandatangani
+          APK_UNSIGNED=$(find android/app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          APK_SIGNED="android/app/build/outputs/apk/release/H809Pro-Manager-v1.0.${{ github.run_number }}.apk"
+          
+          # Zipalign fail APK
+          $BUILD_TOOLS_DIR/zipalign -v -p 4 "$APK_UNSIGNED" "$APK_SIGNED"
+          
+          # Tandatangan APK menggunakan apksigner rasmi Android
+          $BUILD_TOOLS_DIR/apksigner sign --ks release.keystore \
+            --ks-key-alias "${{ secrets.KEY_ALIAS }}" \
+            --ks-pass "pass:${{ secrets.STORE_PASSWORD }}" \
+            --key-pass "pass:${{ secrets.KEY_PASSWORD }}" \
+            "$APK_SIGNED"
+          
+          # Sahkan integriti tandatangan APK
+          $BUILD_TOOLS_DIR/apksigner verify "$APK_SIGNED"
+          
+          # Buang fail keystore sementara untuk keselamatan
+          rm -f release.keystore
+          
+          # Salurkan path fail APK ke output workflow
+          echo "signedReleaseFile=$APK_SIGNED" >> $GITHUB_OUTPUT
 
       - name: Simpan APK ke GitHub Artifacts
         uses: actions/upload-artifact@v4
