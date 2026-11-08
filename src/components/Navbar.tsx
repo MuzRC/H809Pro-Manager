@@ -26,9 +26,9 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const navItems = [
     { id: 'overview', label: 'Ringkasan' },
-    { id: 'bandlock', label: 'Kunci Band' },
+    { id: 'bandlock', label: 'Kunci Jalur' },
     { id: 'sms', label: 'SMS & OTP' },
-    { id: 'ussd', label: 'USSD Dial' },
+    { id: 'ussd', label: 'Dail USSD' },
     { id: 'wifi', label: 'Wi-Fi' },
     { id: 'apn', label: 'APN' },
     { id: 'terminal', label: 'Terminal AT' },
@@ -39,7 +39,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     <header className="sticky top-0 z-40 bg-slate-900/95 backdrop-blur border-b border-slate-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between gap-8 h-16">
-          {/* Zone 1: Single text element wordmark */}
+          {/* Logo & Status Pantas */}
           <div className="flex items-center gap-3 shrink-0">
             <button
               onClick={() => setActiveTab('overview')}
@@ -55,7 +55,6 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             <span className="text-slate-700 hidden md:inline">|</span>
 
-            {/* Quick telemetry text */}
             <div className="hidden lg:flex items-center gap-2 text-xs text-slate-400 font-mono">
               <span className="text-emerald-400">{networkType}</span>
               <span>·</span>
@@ -65,7 +64,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
 
-          {/* Zone 2: Navigation Links */}
+          {/* Pautan Navigasi Desktop */}
           <nav className="hidden xl:flex items-center gap-6 text-sm font-medium text-slate-400">
             {navItems.map((item) => {
               const isActive = activeTab === item.id;
@@ -85,12 +84,12 @@ export const Navbar: React.FC<NavbarProps> = ({
             })}
           </nav>
 
-          {/* Zone 3: Primary Action & Gateway Controls */}
+          {/* Kawalan Get Laluan & But Semula */}
           <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={onOpenGatewayModal}
               className="px-3 py-1.5 text-xs font-mono font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 rounded-md border border-slate-700 transition-colors whitespace-nowrap flex items-center gap-1.5"
-              title="Konfigurasi IP Gateway Modem"
+              title="Konfigurasi IP Get Laluan Modem"
             >
               <Globe className="w-3.5 h-3.5 text-cyan-400" />
               <span>{gatewayIp}</span>
@@ -101,7 +100,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               target="_blank"
               rel="noopener noreferrer"
               className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 text-xs text-slate-400 hover:text-slate-200 bg-slate-800/60 hover:bg-slate-800 rounded-md border border-slate-700 transition-colors whitespace-nowrap"
-              title="Buka WebGUI Asli Modem di Tab Baru"
+              title="Buka WebGUI Asal Modem di Tab Baharu"
             >
               <ExternalLink className="w-3.5 h-3.5" />
               <span className="hidden md:inline">WebGUI</span>
@@ -113,12 +112,12 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="px-3 py-1.5 text-xs font-semibold text-rose-300 bg-rose-950/60 hover:bg-rose-900/60 border border-rose-800/60 rounded-md transition-colors whitespace-nowrap flex items-center gap-1.5 disabled:opacity-50"
             >
               <RotateCw className={`w-3.5 h-3.5 ${isRebooting ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Reboot</span>
+              <span className="hidden sm:inline">But Semula</span>
             </button>
           </div>
         </div>
 
-        {/* Mobile & Tablet Nav Scroller */}
+        {/* Bar Navigasi Skrin Sentuh / Telefon */}
         <div className="xl:hidden flex items-center gap-1 overflow-x-auto py-2 border-t border-slate-800/80 no-scrollbar">
           {navItems.map((item) => {
             const isActive = activeTab === item.id;
