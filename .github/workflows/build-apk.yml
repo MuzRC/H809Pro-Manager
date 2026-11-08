@@ -27,13 +27,15 @@ jobs:
         run: |
           npm run build
 
-      - name: Pasang Capacitor & Janakan Projek Android
+      - name: Pasang Capacitor & Sediakan Android
         run: |
-          npm install --legacy-peer-deps @capacitor/core @capacitor/cli @capacitor/android
-          npx cap init "H809Pro Manager" "com.muz.h809pro" --web-dir dist
+          # Pastikan fail .ts lama dipadam jika tertinggal
+          rm -f capacitor.config.ts
+          
+          # Janakan folder projek android daripada capacitor.config.json
           npx cap add android
 
-          # Benarkan sambungan HTTP untuk IP modem 192.168.1.1
+          # Benarkan sambungan cleartext HTTP untuk IP modem 192.168.1.1
           sed -i 's/<application/<application android:usesCleartextTraffic="true"/' android/app/src/main/AndroidManifest.xml
           
           npx cap sync android
