@@ -37,11 +37,11 @@ export default function App() {
       try {
         return JSON.parse(saved);
       } catch {
-        // sandaran jika ralat parse
+        // Sandaran jika ralat parse
       }
     }
     return {
-      gatewayIp: '192.168.100.1',
+      gatewayIp: '192.168.1.1',
       isConnected: true,
       connectionMode: 'simulated',
       simStatus: 'READY',
@@ -98,7 +98,7 @@ export default function App() {
       try {
         return JSON.parse(saved);
       } catch {
-        // sandaran
+        // Sandaran
       }
     }
     return INITIAL_SMS;
@@ -111,18 +111,18 @@ export default function App() {
       try {
         return JSON.parse(saved);
       } catch {
-        // sandaran
+        // Sandaran
       }
     }
     return DEFAULT_APN_LIST;
   });
 
-  // Senarai peranti bersambung
+  // Senarai peranti bersambung (Subnet 192.168.1.x)
   const [devices, setDevices] = useState<ConnectedDevice[]>([
     {
       id: 'dev-1',
       hostname: 'Telefon Redmi Note 12',
-      ip: '192.168.100.12',
+      ip: '192.168.1.12',
       mac: '44:85:00:23:AA:01',
       connectedAt: '10:14 Pagi',
       currentDownloadSpeed: 950,
@@ -133,7 +133,7 @@ export default function App() {
     {
       id: 'dev-2',
       hostname: 'Komputer Riba Lenovo',
-      ip: '192.168.100.15',
+      ip: '192.168.1.15',
       mac: 'A8:64:F2:19:9C:55',
       connectedAt: '08:30 Pagi',
       currentDownloadSpeed: 820,
@@ -144,7 +144,7 @@ export default function App() {
     {
       id: 'dev-3',
       hostname: 'Smart TV Ruang Tamu',
-      ip: '192.168.100.20',
+      ip: '192.168.1.20',
       mac: '60:01:94:44:11:3E',
       connectedAt: 'Semalam',
       currentDownloadSpeed: 70,
@@ -300,7 +300,7 @@ export default function App() {
 
     setMessages((prev) => [newMsg, ...prev]);
 
-    // Simulasi balasan operator automatik
+    // Simulasi balasan telco tempatan
     if (recipient === '133' || recipient === '118' || recipient === '100') {
       setTimeout(() => {
         const replyMsg: SMSMessage = {
@@ -426,7 +426,7 @@ export default function App() {
   const handleFactoryReset = () => {
     if (
       window.confirm(
-        'AMARAN: Adakah anda pasti ingin menetapkan semula modem H809Pro ke tetapan asal kilang?'
+        'AMARAN: Adakah anda pasti ingin menetapkan semula modem H809Pro ke tetapan asal kilang (192.168.1.1)?'
       )
     ) {
       localStorage.removeItem('h809pro_status');
