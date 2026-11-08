@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Navbar } from './components/Navbar';
 import { OverviewTab } from './components/OverviewTab';
 import { BandLockTab } from './components/BandLockTab';
@@ -23,6 +23,7 @@ import {
   DEFAULT_APN_LIST,
   INITIAL_SMS,
 } from './data/constants';
+import { h809proApi } from './services/h809proApi';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -30,31 +31,31 @@ export default function App() {
   const [isRebootModalOpen, setIsRebootModalOpen] = useState(false);
   const [isRebooting, setIsRebooting] = useState(false);
 
-  // Status awal modem
+  // Status Modem
   const [status, setStatus] = useState<ModemStatus>(() => {
     const saved = localStorage.getItem('h809pro_status');
     if (saved) {
       try {
         return JSON.parse(saved);
       } catch {
-        // Sandaran jika ralat parse
+        // Sandaran jika parse ralat
       }
     }
     return {
       gatewayIp: '192.168.1.1',
-      isConnected: true,
-      connectionMode: 'simulated',
+      isConnected: false,
+      connectionMode: 'live',
       simStatus: 'READY',
-      operator: MALAYSIAN_OPERATORS[0], // Tune Talk lalai
+      operator: MALAYSIAN_OPERATORS[0],
       networkType: '4G LTE',
       networkMode: 'LTE_ONLY',
       lockedBands: [1, 3],
       signal: {
-        rsrp: -82,
-        rsrq: -9,
-        rssi: -64,
-        sinr: 18,
-        csq: 27,
+        rsrp: -85,
+        rsrq: -10,
+        rssi: -65,
+        sinr: 16,
+        csq: 24,
         cellId: '3819201',
         pci: 142,
         tac: '9201',
@@ -62,14 +63,14 @@ export default function App() {
         bandName: 'Jalur 3',
         frequency: '1800 MHz (FDD)',
       },
-      downloadSpeed: 1840, // KB/s
-      uploadSpeed: 420, // KB/s
-      totalDataMonth: 21.4,
+      downloadSpeed: 0,
+      uploadSpeed: 0,
+      totalDataMonth: 18.5,
       quotaLimitGb: 50,
       temperature: 38,
       batteryStatus: 'BYPASS_DIRECT_POWER',
       batteryLevel: 100,
-      uptimeSeconds: 14820,
+      uptimeSeconds: 0,
       wifiSsid: 'H809Pro_4G_WiFi',
       wifiSecurity: 'WPA2-PSK',
       wifiHideSsid: false,
@@ -77,96 +78,84 @@ export default function App() {
       maxClients: 10,
       imei: '868940051283941',
       macAddress: '7C:B0:C2:59:E4:10',
-      firmwareVersion: 'H809PRO_V4.2.1_MY_BYPASS',
+      firmwareVersion: 'H809PRO_V4.2.1_LIVE',
       hardwareVersion: 'H809-PCB-V2.0',
     };
   });
 
-  // Sejarah carta kelajuan (20 titik terakhir)
   const [speedHistory, setSpeedHistory] = useState<{ dl: number; ul: number }[]>([
-    { dl: 1400, ul: 320 },
-    { dl: 1650, ul: 380 },
-    { dl: 1900, ul: 410 },
-    { dl: 2100, ul: 540 },
-    { dl: 1840, ul: 420 },
+    { dl: 0, ul: 0 },
+    { dl: 0, ul: 0 },
+    { dl: 0, ul: 0 },
+    { dl: 0, ul: 0 },
+    { dl: 0, ul: 0 },
   ]);
 
-  // Peti mesej SMS
   const [messages, setMessages] = useState<SMSMessage[]>(() => {
     const saved = localStorage.getItem('h809pro_sms');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        // Sandaran
-      }
-    }
-    return INITIAL_SMS;
+    return saved ? JSON.parse(saved) : INITIAL_SMS;
   });
 
-  // Profil APN
   const [apnProfiles, setApnProfiles] = useState<APNProfile[]>(() => {
     const saved = localStorage.getItem('h809pro_apn');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        // Sandaran
-      }
-    }
-    return DEFAULT_APN_LIST;
+    return saved ? JSON.parse(saved) : DEFAULT_APN_LIST;
   });
 
-  // Senarai peranti bersambung (Subnet 192.168.1.x)
   const [devices, setDevices] = useState<ConnectedDevice[]>([
     {
       id: 'dev-1',
-      hostname: 'Telefon Redmi Note 12',
-      ip: '192.168.1.12',
+      hostname: 'Telefon Bimbit (Peranti Ini)',
+      ip: '192.168.1.10',
       mac: '44:85:00:23:AA:01',
-      connectedAt: '10:14 Pagi',
-      currentDownloadSpeed: 950,
-      currentUploadSpeed: 180,
-      totalDataUsed: 1420,
-      isBlocked: false,
-    },
-    {
-      id: 'dev-2',
-      hostname: 'Komputer Riba Lenovo',
-      ip: '192.168.1.15',
-      mac: 'A8:64:F2:19:9C:55',
-      connectedAt: '08:30 Pagi',
-      currentDownloadSpeed: 820,
-      currentUploadSpeed: 210,
-      totalDataUsed: 3850,
-      isBlocked: false,
-    },
-    {
-      id: 'dev-3',
-      hostname: 'Smart TV Ruang Tamu',
-      ip: '192.168.1.20',
-      mac: '60:01:94:44:11:3E',
-      connectedAt: 'Semalam',
-      currentDownloadSpeed: 70,
-      currentUploadSpeed: 30,
-      totalDataUsed: 5200,
+      connectedAt: 'Aktif',
+      currentDownloadSpeed: 450,
+      currentUploadSpeed: 80,
+      totalDataUsed: 1250,
       isBlocked: false,
     },
   ]);
 
-  // Log Perintah AT
   const [atLogs, setAtLogs] = useState<ATCommandLog[]>([
     {
-      id: 'cmd-0',
+      id: 'cmd-init',
       command: 'ATI',
-      response:
-        'Penghala H809Pro LTE CPE\nPengilang: ASR Microelectronics\nModel: H809Pro-4G\nSemakan: V4.2.1-BYPASS\nIMEI: 868940051283941\n\nOK',
-      timestamp: '22:40:02',
+      response: 'Modem H809Pro Bersambung.\nPengilang: ASR Microelectronics\nStatus: SEDIA',
+      timestamp: new Date().toLocaleTimeString('ms-MY'),
       status: 'success',
     },
   ]);
 
-  // Simpan status dalam localStorage
+  // Kemas kini Gateway IP bila pengguna menukar tetapan
+  useEffect(() => {
+    h809proApi.setGatewayIp(status.gatewayIp);
+  }, [status.gatewayIp]);
+
+  // Polling Langsung: Ambil Isyarat & Maklumat daripada Modem Sebenar
+  const refreshLiveTelemetry = useCallback(async () => {
+    if (isRebooting) return;
+
+    const isAlive = await h809proApi.pingGateway();
+    if (!isAlive && status.connectionMode === 'live') {
+      setStatus((prev) => ({ ...prev, isConnected: false }));
+      return;
+    }
+
+    const liveData = await h809proApi.fetchLiveStatus();
+    setStatus((prev) => ({
+      ...prev,
+      ...liveData,
+      isConnected: true,
+      uptimeSeconds: prev.uptimeSeconds + 3,
+    }));
+  }, [isRebooting, status.connectionMode]);
+
+  useEffect(() => {
+    refreshLiveTelemetry();
+    const interval = setInterval(refreshLiveTelemetry, 3000);
+    return () => clearInterval(interval);
+  }, [refreshLiveTelemetry]);
+
+  // Simpan tetapan dalam storan peranti
   useEffect(() => {
     localStorage.setItem('h809pro_status', JSON.stringify(status));
   }, [status]);
@@ -179,114 +168,65 @@ export default function App() {
     localStorage.setItem('h809pro_apn', JSON.stringify(apnProfiles));
   }, [apnProfiles]);
 
-  // Pemantau langsung trafik & telemetri isyarat
-  useEffect(() => {
-    if (isRebooting) return;
-
-    const interval = setInterval(() => {
-      setStatus((prev) => {
-        const dlDelta = (Math.random() - 0.48) * 300;
-        const ulDelta = (Math.random() - 0.48) * 80;
-        const newDl = Math.max(120, Math.min(3800, Math.round(prev.downloadSpeed + dlDelta)));
-        const newUl = Math.max(40, Math.min(950, Math.round(prev.uploadSpeed + ulDelta)));
-
-        const rsrpFluct = (Math.random() - 0.5) * 1.5;
-        const newRsrp = Math.max(-115, Math.min(-62, Math.round((prev.signal.rsrp + rsrpFluct) * 10) / 10));
-
-        return {
-          ...prev,
-          downloadSpeed: newDl,
-          uploadSpeed: newUl,
-          uptimeSeconds: prev.uptimeSeconds + 2,
-          signal: {
-            ...prev.signal,
-            rsrp: newRsrp,
-          },
-        };
-      });
-
-      setSpeedHistory((prev) => {
-        const next = [
-          ...prev.slice(1),
-          {
-            dl: status.downloadSpeed,
-            ul: status.uploadSpeed,
-          },
-        ];
-        return next;
-      });
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, [isRebooting, status.downloadSpeed, status.uploadSpeed]);
-
-  // Kemas kini isyarat secara manual
-  const handleRefreshSignal = () => {
-    setStatus((prev) => ({
-      ...prev,
-      signal: {
-        ...prev.signal,
-        rsrp: Math.round(-78 - Math.random() * 8),
-        sinr: Math.round(16 + Math.random() * 6),
-        csq: Math.round(25 + Math.random() * 5),
-      },
-    }));
-  };
-
-  // Tetapkan semula sambungan rangkaian
-  const handleResetNetwork = () => {
-    setStatus((prev) => ({ ...prev, downloadSpeed: 0, uploadSpeed: 0 }));
-    setTimeout(() => {
-      setStatus((prev) => ({
-        ...prev,
-        downloadSpeed: 2150,
-        uploadSpeed: 480,
-      }));
-    }, 1200);
-  };
-
-  // Tetapan Kunci Jalur LTE
-  const handleApplyBandConfig = (bands: number[], mode: NetworkMode) => {
-    const primaryBand = bands.includes(3) ? 3 : bands[0] || 1;
-    const bandFreqMap: Record<number, { name: string; freq: string }> = {
-      1: { name: 'Jalur 1', freq: '2100 MHz (FDD)' },
-      3: { name: 'Jalur 3', freq: '1800 MHz (FDD)' },
-      5: { name: 'Jalur 5', freq: '850 MHz (FDD)' },
-      8: { name: 'Jalur 8', freq: '900 MHz (FDD)' },
-      40: { name: 'Jalur 40', freq: '2300 MHz (TDD)' },
-    };
-
-    const targetInfo = bandFreqMap[primaryBand] || bandFreqMap[3];
+  // Kunci Jalur Sebenar
+  const handleApplyBandConfig = async (bands: number[], mode: NetworkMode) => {
+    const success = await h809proApi.applyBandLock(bands, mode);
+    const timeStr = new Date().toLocaleTimeString('ms-MY');
 
     setStatus((prev) => ({
       ...prev,
       lockedBands: bands,
       networkMode: mode,
-      signal: {
-        ...prev.signal,
-        band: primaryBand,
-        bandName: targetInfo.name,
-        frequency: targetInfo.freq,
-        sinr: primaryBand === 40 ? 22 : primaryBand === 3 ? 19 : 14,
-        rsrp: primaryBand === 40 ? -79 : primaryBand === 3 ? -82 : -88,
-      },
     }));
 
-    const timeStr = new Date().toLocaleTimeString('ms-MY');
     setAtLogs((prev) => [
       ...prev,
       {
         id: `cmd-${Date.now()}`,
-        command: `AT+SETBAND=${bands.join(',')},MODE=${mode}`,
-        response: `+SETBAND: JALUR_DIKUNCI=[${bands.join(',')}]\n+SYSMODE: ${mode}\nOK`,
+        command: `AT^SETBAND=${bands.join(',')},MODE=${mode}`,
+        response: success
+          ? `+SETBAND: JALUR BERJAYA DIKUNCI=[${bands.join(',')}]\nOK`
+          : `RALAT: Modem gagal menetapkan jalur frekuensi`,
         timestamp: timeStr,
-        status: 'success',
+        status: success ? 'success' : 'error',
+      },
+    ]);
+
+    refreshLiveTelemetry();
+  };
+
+  // Pelaksana Arahan AT Sebenar
+  const handleExecuteATCommand = async (rawCmd: string) => {
+    const timeStr = new Date().toLocaleTimeString('ms-MY');
+    const response = await h809proApi.executeATCommand(rawCmd);
+
+    setAtLogs((prev) => [
+      ...prev,
+      {
+        id: `cmd-${Date.now()}`,
+        command: rawCmd,
+        response,
+        timestamp: timeStr,
+        status: response.startsWith('RALAT') ? 'error' : 'success',
       },
     ]);
   };
 
-  // Pengendali SMS
-  const handleSendMessage = (recipient: string, text: string) => {
+  // But Semula Perkakasan Sebenar
+  const handleRebootTrigger = async () => {
+    setIsRebootModalOpen(true);
+    setIsRebooting(true);
+    await h809proApi.rebootModem();
+  };
+
+  const handleFinishReboot = () => {
+    setIsRebootModalOpen(false);
+    setIsRebooting(false);
+    refreshLiveTelemetry();
+  };
+
+  // Pengendali SMS Sebenar
+  const handleSendMessage = async (recipient: string, text: string) => {
     const timeStr = new Date().toISOString().slice(0, 16).replace('T', ' ');
     const newMsg: SMSMessage = {
       id: `sms-${Date.now()}`,
@@ -299,21 +239,7 @@ export default function App() {
     };
 
     setMessages((prev) => [newMsg, ...prev]);
-
-    // Simulasi balasan telco tempatan
-    if (recipient === '133' || recipient === '118' || recipient === '100') {
-      setTimeout(() => {
-        const replyMsg: SMSMessage = {
-          id: `sms-${Date.now() + 1}`,
-          sender: recipient,
-          timestamp: new Date().toISOString().slice(0, 16).replace('T', ' '),
-          content: `Balasan daripada ${recipient}: Permintaan "${text}" telah berjaya diproses. Baki kuota aktif anda ialah 48.2 GB dengan tempoh sah 30 hari.`,
-          isRead: false,
-          folder: 'inbox',
-        };
-        setMessages((prev) => [replyMsg, ...prev]);
-      }, 1500);
-    }
+    await h809proApi.sendSMS(recipient, text);
   };
 
   const handleDeleteMessage = (id: string) => {
@@ -326,7 +252,6 @@ export default function App() {
     );
   };
 
-  // Kemas kini tetapan Wi-Fi
   const handleUpdateWifiSettings = (
     ssid: string,
     pass: string,
@@ -347,7 +272,6 @@ export default function App() {
     );
   };
 
-  // Pengendali Profil APN
   const handleSetDefaultApn = (id: string) => {
     setApnProfiles((prev) =>
       prev.map((p) => ({
@@ -361,68 +285,6 @@ export default function App() {
     setApnProfiles((prev) => [...prev, newProfile]);
   };
 
-  // Pelaksana Perintah AT
-  const handleExecuteATCommand = (rawCmd: string) => {
-    const cmd = rawCmd.trim().toUpperCase();
-    const timeStr = new Date().toLocaleTimeString('ms-MY');
-    let response = 'OK';
-    let statusType: 'success' | 'error' = 'success';
-
-    if (cmd === 'ATI') {
-      response = `Penghala H809Pro LTE CPE\nPengilang: ASR Microelectronics\nModel: H809Pro-4G\nFirmware: ${status.firmwareVersion}\nIMEI: ${status.imei}\nMAC: ${status.macAddress}\n\nOK`;
-    } else if (cmd === 'AT+CSQ') {
-      response = `+CSQ: ${status.signal.csq},99\n\nOK`;
-    } else if (cmd === 'AT+COPS?') {
-      response = `+COPS: 0,0,"${status.operator.name.toUpperCase()}",7\n\nOK`;
-    } else if (cmd === 'AT+CREG?') {
-      response = `+CREG: 0,1\n\nOK`;
-    } else if (cmd === 'AT^SYSINFO') {
-      response = `^SYSINFO: 2,3,0,1,1\nMod: LTE Cat-4\nPerkhidmatan: SAH\nSIM: SEDIA\n\nOK`;
-    } else if (cmd === 'AT+TEMP?' || cmd === 'AT+CPUTEMP') {
-      response = `+TEMP: ${status.temperature}.2 C (SELAMAT)\n\nOK`;
-    } else if (cmd === 'AT+CBC') {
-      response = `+CBC: 0,100,5000\nMOD_KUASA: PINTASAN_USB_TERUS\nSTATUS: DALAM_TALIAN_24JAM\n\nOK`;
-    } else if (cmd === 'AT+CGDCONT?') {
-      const activeApn = apnProfiles.find((a) => a.isDefault) || apnProfiles[0];
-      response = `+CGDCONT: 1,"${activeApn.pdpType}","${activeApn.apn}","0.0.0.0",0,0\n\nOK`;
-    } else if (cmd === 'AT+RESET' || cmd === 'AT+REBOOT') {
-      response = `^SYSRESET: MEMULAKAN URUTAN BUT SEMULA...\nOK`;
-      setTimeout(() => {
-        setIsRebootModalOpen(true);
-        setIsRebooting(true);
-      }, 500);
-    } else if (cmd.startsWith('AT+')) {
-      response = `ARAHAN DITERIMA\n+MODEM: ${cmd}\n\nOK`;
-    } else {
-      response = `+CME ERROR: 100 (ARAHAN TIDAK DIKETAHUI: "${cmd}")`;
-      statusType = 'error';
-    }
-
-    setAtLogs((prev) => [
-      ...prev,
-      {
-        id: `cmd-${Date.now()}`,
-        command: rawCmd,
-        response,
-        timestamp: timeStr,
-        status: statusType,
-      },
-    ]);
-  };
-
-  // But Semula
-  const handleRebootTrigger = () => {
-    setIsRebootModalOpen(true);
-    setIsRebooting(true);
-  };
-
-  const handleFinishReboot = () => {
-    setIsRebootModalOpen(false);
-    setIsRebooting(false);
-    handleRefreshSignal();
-  };
-
-  // Tetapan Semula Kilang
   const handleFactoryReset = () => {
     if (
       window.confirm(
@@ -438,7 +300,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-slate-950">
-      {/* Bar Navigasi Atas */}
+      {/* Bar Navigasi */}
       <Navbar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -451,14 +313,21 @@ export default function App() {
         rsrp={status.signal.rsrp}
       />
 
-      {/* Paparan Kandungan Utama */}
+      {/* Amaran Jika Wi-Fi Modem Belum Bersambung */}
+      {!status.isConnected && (
+        <div className="bg-amber-950/80 border-b border-amber-800 px-4 py-2 text-center text-xs text-amber-200 font-mono">
+          Perhatian: Tidak dapat berhubung dengan modem di http://{status.gatewayIp}. Sila pastikan telefon anda telah menyambung ke Wi-Fi modem H809Pro.
+        </div>
+      )}
+
+      {/* Kandungan Tab Utama */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {activeTab === 'overview' && (
           <OverviewTab
             status={status}
             speedHistory={speedHistory}
-            onRefreshSignal={handleRefreshSignal}
-            onResetNetwork={handleResetNetwork}
+            onRefreshSignal={refreshLiveTelemetry}
+            onResetNetwork={() => handleExecuteATCommand('AT+CFUN=0\nAT+CFUN=1')}
             onSwitchBandClick={() => setActiveTab('bandlock')}
           />
         )}
@@ -526,7 +395,7 @@ export default function App() {
         )}
       </main>
 
-      {/* Modal Konfigurasi Get Laluan IP */}
+      {/* Modal Get Laluan IP */}
       <GatewayModal
         isOpen={isGatewayModalOpen}
         onClose={() => setIsGatewayModalOpen(false)}
@@ -543,7 +412,7 @@ export default function App() {
       {/* Modal But Semula */}
       <RebootModal
         isOpen={isRebootModalOpen}
-        onConfirmReboot={() => setIsRebooting(true)}
+        onConfirmReboot={handleRebootTrigger}
         onCancel={handleFinishReboot}
         isRebooting={isRebooting}
       />
@@ -552,14 +421,15 @@ export default function App() {
       <footer className="border-t border-slate-900 bg-slate-950 py-4 text-xs font-mono text-slate-500">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2">
           <div>
-            <span>Pengurus CPE 4G LTE H809Pro</span>
+            <span>Pengurus CPE 4G LTE H809Pro (Live)</span>
             <span className="mx-2">·</span>
             <span>Get Laluan: http://{status.gatewayIp}</span>
           </div>
           <div>
-            <span>Status Pintasan: 5V USB Aktif</span>
-            <span className="mx-2">·</span>
-            <span className="text-emerald-400">Bersambung</span>
+            <span>Status Perkakasan: </span>
+            <span className={status.isConnected ? 'text-emerald-400' : 'text-rose-400'}>
+              {status.isConnected ? 'Bersambung ke Modem' : 'Tiada Sambungan'}
+            </span>
           </div>
         </div>
       </footer>
