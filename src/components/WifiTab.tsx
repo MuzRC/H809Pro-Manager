@@ -7,7 +7,6 @@ import {
   Smartphone,
   Laptop,
   Tv,
-  Ban,
   CheckCircle2,
   RefreshCw,
 } from 'lucide-react';
@@ -56,7 +55,7 @@ export const WifiTab: React.FC<WifiTabProps> = ({
 
   const getDeviceIcon = (hostname: string) => {
     const lower = hostname.toLowerCase();
-    if (lower.includes('laptop') || lower.includes('pc') || lower.includes('thinkpad')) {
+    if (lower.includes('laptop') || lower.includes('pc') || lower.includes('komputer')) {
       return <Laptop className="w-4 h-4 text-cyan-400" />;
     }
     if (lower.includes('tv') || lower.includes('smart')) {
@@ -67,23 +66,23 @@ export const WifiTab: React.FC<WifiTabProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Header Info */}
+      {/* Pengenalan Tab */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <Wifi className="w-5 h-5 text-cyan-400" />
               <h2 className="text-lg font-bold text-white tracking-tight">
-                Pengaturan Wi-Fi & Hotspot H809Pro
+                Tetapan Wi-Fi & Hotspot H809Pro
               </h2>
             </div>
             <p className="text-xs text-slate-400">
-              Ubah nama SSID hotspot, kata sandi WPA2, sembunyikan jaringan, dan pantau daftar perangkat yang sedang terhubung ke modem.
+              Ubah nama SSID hotspot, kata laluan WPA2, sorokkan nama rangkaian, dan pantau senarai peranti yang sedang bersambung ke modem.
             </p>
           </div>
 
           <div className="flex items-center gap-2 font-mono text-xs text-slate-300">
-            <span>Perangkat Aktif:</span>
+            <span>Peranti Aktif:</span>
             <span className="text-cyan-400 font-bold tabular-nums">
               {devices.filter((d) => !d.isBlocked).length} / {maxClients} Klien
             </span>
@@ -94,13 +93,13 @@ export const WifiTab: React.FC<WifiTabProps> = ({
       {successMsg && (
         <div className="p-4 rounded-xl bg-emerald-950/50 border border-emerald-800/80 text-emerald-200 text-xs flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-          <span>Pengaturan Wi-Fi berhasil diperbarui! Perangkat akan terhubung ulang secara otomatis.</span>
+          <span>Tetapan Wi-Fi berjaya dikemas kini! Peranti akan bersambung semula secara automatik.</span>
         </div>
       )}
 
-      {/* Grid: Wi-Fi Form & Connected Devices */}
+      {/* Grid: Borang Wi-Fi & Senarai Peranti Bersambung */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Wi-Fi Configuration Card (5 cols) */}
+        {/* Kad Konfigurasi Wi-Fi */}
         <div className="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-xl p-5">
           <h3 className="text-sm font-bold text-white uppercase tracking-wider font-mono mb-4 flex items-center gap-2">
             <Shield className="w-4 h-4 text-cyan-400" />
@@ -123,7 +122,7 @@ export const WifiTab: React.FC<WifiTabProps> = ({
 
             <div>
               <label className="block text-[11px] font-mono text-slate-400 mb-1">
-                Kata Sandi Wi-Fi (Password)
+                Kata Laluan Wi-Fi
               </label>
               <div className="relative">
                 <input
@@ -143,7 +142,7 @@ export const WifiTab: React.FC<WifiTabProps> = ({
                 </button>
               </div>
               <span className="text-[10px] text-slate-500 font-mono mt-1 block">
-                Minimal 8 karakter WPA2-PSK
+                Sekurang-kurangnya 8 aksara WPA2-PSK
               </span>
             </div>
 
@@ -157,16 +156,16 @@ export const WifiTab: React.FC<WifiTabProps> = ({
                   onChange={(e) => setChannel(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-2 text-xs text-slate-200 font-mono focus:outline-none focus:border-cyan-500"
                 >
-                  <option value="Auto (Rekomendasi)">Auto</option>
-                  <option value="Kanal 1 (2412 MHz)">Kanal 1</option>
-                  <option value="Kanal 6 (2437 MHz)">Kanal 6</option>
-                  <option value="Kanal 11 (2462 MHz)">Kanal 11</option>
+                  <option value="Auto (Disyorkan)">Auto (Disyorkan)</option>
+                  <option value="Saluran 1 (2412 MHz)">Saluran 1</option>
+                  <option value="Saluran 6 (2437 MHz)">Saluran 6</option>
+                  <option value="Saluran 11 (2462 MHz)">Saluran 11</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-[11px] font-mono text-slate-400 mb-1">
-                  Keamanan
+                  Keselamatan
                 </label>
                 <div className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-2 text-xs text-slate-300 font-mono">
                   WPA2-PSK (AES)
@@ -174,7 +173,7 @@ export const WifiTab: React.FC<WifiTabProps> = ({
               </div>
             </div>
 
-            {/* Toggle Sembunyikan SSID */}
+            {/* Suis Sorokkan SSID */}
             <div className="pt-2">
               <label className="flex items-center gap-2 cursor-pointer p-2.5 rounded-lg bg-slate-950/60 border border-slate-800">
                 <input
@@ -185,10 +184,10 @@ export const WifiTab: React.FC<WifiTabProps> = ({
                 />
                 <div>
                   <div className="text-xs font-semibold text-slate-200">
-                    Sembunyikan Nama SSID (Hidden)
+                    Sorokkan Nama SSID (Tersembunyi)
                   </div>
                   <div className="text-[10px] text-slate-500">
-                    Nama WiFi tidak akan muncul di daftar pencarian sekitar.
+                    Nama Wi-Fi tidak akan dipaparkan dalam senarai imbasan sekeliling.
                   </div>
                 </div>
               </label>
@@ -202,24 +201,24 @@ export const WifiTab: React.FC<WifiTabProps> = ({
               {isSaving ? (
                 <>
                   <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  <span>Menyimpan Pengaturan...</span>
+                  <span>Menyimpan Tetapan...</span>
                 </>
               ) : (
-                <span>Simpan Pengaturan Wi-Fi</span>
+                <span>Simpan Tetapan Wi-Fi</span>
               )}
             </button>
           </form>
         </div>
 
-        {/* Connected Clients / Devices Table (7 cols) */}
+        {/* Jadual Peranti Bersambung */}
         <div className="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-xl p-5">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-sm font-bold text-white uppercase tracking-wider font-mono">
-                Perangkat Terhubung (Clients)
+                Peranti Bersambung (Klien)
               </h3>
               <p className="text-xs text-slate-400">
-                Daftar HP, laptop, dan smart device yang terhubung ke jaringan Wi-Fi modem
+                Senarai telefon, komputer riba, dan peranti pintar yang bersambung ke modem
               </p>
             </div>
           </div>
@@ -228,10 +227,10 @@ export const WifiTab: React.FC<WifiTabProps> = ({
             <table className="w-full text-left text-xs font-mono">
               <thead>
                 <tr className="border-b border-slate-800 text-slate-400 text-[11px]">
-                  <th className="pb-3 font-semibold">Perangkat</th>
+                  <th className="pb-3 font-semibold">Peranti</th>
                   <th className="pb-3 font-semibold">Alamat IP / MAC</th>
-                  <th className="pb-3 font-semibold text-right">Trafik</th>
-                  <th className="pb-3 font-semibold text-right">Aksi</th>
+                  <th className="pb-3 font-semibold text-right">Trafik Semasa</th>
+                  <th className="pb-3 font-semibold text-right">Tindakan</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
@@ -266,7 +265,7 @@ export const WifiTab: React.FC<WifiTabProps> = ({
                         ↓ {device.currentDownloadSpeed} KB/s
                       </div>
                       <div className="text-[10px] text-slate-500">
-                        Total {device.totalDataUsed} MB
+                        Jumlah {device.totalDataUsed} MB
                       </div>
                     </td>
 
@@ -279,7 +278,7 @@ export const WifiTab: React.FC<WifiTabProps> = ({
                             : 'bg-rose-950/80 text-rose-300 hover:bg-rose-900 border border-rose-800/80'
                         }`}
                       >
-                        {device.isBlocked ? 'Buka Blokir' : 'Blokir'}
+                        {device.isBlocked ? 'Buka Sekatan' : 'Sekat'}
                       </button>
                     </td>
                   </tr>
