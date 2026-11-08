@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Lock, CheckCircle2, ShieldAlert, Zap, Radio, AlertTriangle } from 'lucide-react';
 import { BandOption, NetworkMode } from '../types/modem';
-import { LTE_BANDS_AVAILABLE, INDONESIAN_OPERATORS } from '../data/constants';
+import { LTE_BANDS_AVAILABLE, MALAYSIAN_OPERATORS } from '../data/constants';
 
 interface BandLockTabProps {
   currentLockedBands: number[];
@@ -21,15 +21,14 @@ export const BandLockTab: React.FC<BandLockTabProps> = ({
   const [isApplying, setIsApplying] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'info'; text: string } | null>(null);
 
-  const currentOp = INDONESIAN_OPERATORS.find((op) => op.id === operatorId) || INDONESIAN_OPERATORS[0];
+  const currentOp = MALAYSIAN_OPERATORS.find((op) => op.id === operatorId) || MALAYSIAN_OPERATORS[0];
 
   const handleToggleBand = (bandNum: number) => {
     if (selectedBands.includes(bandNum)) {
-      // Must keep at least one band selected
       if (selectedBands.length === 1) {
         setFeedbackMsg({
           type: 'info',
-          text: 'Peringatan: Minimal 1 frekuensi band harus aktif agar modem tetap terhubung ke BTS.',
+          text: 'Peringatan: Sekurang-kurangnya 1 jalur frekuensi mesti diaktifkan supaya modem kekal bersambung ke menara pemancar (BTS).',
         });
         return;
       }
@@ -50,7 +49,7 @@ export const BandLockTab: React.FC<BandLockTabProps> = ({
     setSelectedMode('LTE_ONLY');
     setFeedbackMsg({
       type: 'info',
-      text: `Rekomendasi operator ${currentOp.name} dimuat (Band: ${currentOp.supportedBands.join(', ')}).`,
+      text: `Cadangan bagi pengendali ${currentOp.name} telah dimuatkan (Jalur: ${currentOp.supportedBands.join(', ')}).`,
     });
   };
 
@@ -63,27 +62,27 @@ export const BandLockTab: React.FC<BandLockTabProps> = ({
       setIsApplying(false);
       setFeedbackMsg({
         type: 'success',
-        text: `Sukses! Kunci frekuensi band ${selectedBands.map((b) => `B${b}`).join(', ')} dan mode ${
-          selectedMode === 'LTE_ONLY' ? '4G LTE Saja' : selectedMode
-        } berhasil diterapkan ke modem H809Pro.`,
+        text: `Berjaya! Kunci jalur frekuensi ${selectedBands.map((b) => `B${b}`).join(', ')} dan mod ${
+          selectedMode === 'LTE_ONLY' ? '4G LTE Sahaja' : selectedMode
+        } telah selamat diterapkan pada modem H809Pro.`,
       });
     }, 800);
   };
 
   return (
     <div className="space-y-6">
-      {/* Header Info */}
+      {/* Pengenalan Tab */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <Lock className="w-5 h-5 text-cyan-400" />
               <h2 className="text-lg font-bold text-white tracking-tight">
-                Kunci Frekuensi Band LTE (Band Locking)
+                Kunci Jalur Frekuensi LTE (Band Locking)
               </h2>
             </div>
             <p className="text-xs text-slate-400 max-w-2xl">
-              Pilih satu atau beberapa pita frekuensi 4G LTE tertentu untuk memaksa modem H809Pro terhubung ke BTS dengan kecepatan dan stabilitas terbaik, menghindari jumping sinyal ke band yang lambat atau padat.
+              Pilih satu atau gabungan jalur 4G LTE tertentu untuk memaksa modem H809Pro bersambung ke menara pemancar dengan kestabilan dan kelajuan terbaik, serta mengelakkan modem bertukar secara rawak ke jalur yang sesak.
             </p>
           </div>
 
@@ -93,13 +92,13 @@ export const BandLockTab: React.FC<BandLockTabProps> = ({
               className="px-3 py-1.5 text-xs font-semibold text-cyan-400 hover:text-cyan-300 bg-cyan-950/60 hover:bg-cyan-900/60 border border-cyan-800/80 rounded-md transition-colors whitespace-nowrap flex items-center gap-1.5"
             >
               <Zap className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Rekomendasi {currentOp.name}</span>
+              <span>Syor {currentOp.name}</span>
             </button>
             <button
               onClick={handleSelectAllBands}
               className="px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-md transition-colors whitespace-nowrap"
             >
-              Pilih Semua Band
+              Pilih Semua Jalur
             </button>
           </div>
         </div>
@@ -122,34 +121,34 @@ export const BandLockTab: React.FC<BandLockTabProps> = ({
         </div>
       )}
 
-      {/* Network Mode Switcher (LTE Only / Auto) */}
+      {/* Pemilih Mod Rangkaian */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
         <h3 className="text-sm font-bold text-white uppercase tracking-wider font-mono mb-2">
-          1. Mode Jaringan Seluler
+          1. Mod Rangkaian Selular
         </h3>
         <p className="text-xs text-slate-400 mb-4">
-          Pilih preferensi generasi jaringan seluler. Sangat disarankan memilih "4G LTE Saja" untuk mencegah modem drop ke 3G/HSPA saat sinyal melemah.
+          Tentukan generasi rangkaian selular utama. Disyorkan menggunakan "4G LTE Sahaja" bagi mengelakkan sambungan jatuh ke 3G apabila isyarat menurun seketika.
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[
             {
               id: 'LTE_ONLY' as NetworkMode,
-              title: '4G LTE Saja (Direkomendasikan)',
-              desc: 'Hanya mengunci sinyal 4G LTE. Mencegah drop ke 3G/HSPA.',
-              badge: 'Anti-Drop',
+              title: '4G LTE Sahaja (Disyorkan)',
+              desc: 'Hanya mengunci sambungan 4G LTE. Mencegah daripada jatuh ke mod 3G.',
+              badge: 'Kekal 4G',
             },
             {
               id: 'AUTO' as NetworkMode,
-              title: 'Otomatis (4G / 3G Auto)',
-              desc: 'Modem akan memilih 4G atau 3G berdasarkan kekuatan sinyal.',
+              title: 'Automatik (4G / 3G Auto)',
+              desc: 'Modem akan memilih 4G atau 3G mengikut tahap kekuatan isyarat semasa.',
               badge: 'Fleksibel',
             },
             {
               id: 'WCDMA_ONLY' as NetworkMode,
-              title: '3G / WCDMA Saja',
-              desc: 'Hanya digunakan jika area Anda belum ada jangkauan 4G.',
-              badge: 'Legacy',
+              title: '3G / WCDMA Sahaja',
+              desc: 'Hanya digunakan jika lokasi anda tiada liputan rangkaian 4G.',
+              badge: 'Warisan',
             },
           ].map((mode) => {
             const isSelected = selectedMode === mode.id;
@@ -184,18 +183,18 @@ export const BandLockTab: React.FC<BandLockTabProps> = ({
         </div>
       </div>
 
-      {/* LTE Band Cards Grid */}
+      {/* Kad Jalur Frekuensi LTE */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-sm font-bold text-white uppercase tracking-wider font-mono">
-            2. Frekuensi Band 4G LTE
+            2. Jalur Frekuensi 4G LTE
           </h3>
           <span className="text-xs font-mono text-cyan-400">
-            {selectedBands.length} dari {LTE_BANDS_AVAILABLE.length} Band Aktif
+            {selectedBands.length} daripada {LTE_BANDS_AVAILABLE.length} Jalur Aktif
           </span>
         </div>
         <p className="text-xs text-slate-400 mb-4">
-          Klik frekuensi untuk mengaktifkan atau menonaktifkan. Anda dapat mengunci satu band saja (misal B3 untuk kecepatan maksimal) atau kombinasi beberapa band.
+          Klik kad jalur untuk hidupkan atau matikan. Anda boleh mengunci satu jalur sahaja (contohnya Jalur 3 untuk kelajuan tinggi) atau gabungan beberapa jalur.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -217,7 +216,7 @@ export const BandLockTab: React.FC<BandLockTabProps> = ({
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <span className="text-lg font-bold font-mono text-white">
-                        Band {bandItem.band}
+                        Jalur {bandItem.band}
                       </span>
                       <span className="text-xs font-mono text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800/60">
                         {bandItem.freq}
@@ -241,7 +240,7 @@ export const BandLockTab: React.FC<BandLockTabProps> = ({
                     </span>
                     {isOpSupported && (
                       <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800/50">
-                        Didukung {currentOp.name}
+                        Disokong {currentOp.name}
                       </span>
                     )}
                   </div>
@@ -252,17 +251,17 @@ export const BandLockTab: React.FC<BandLockTabProps> = ({
                 </div>
 
                 <div className="pt-2 border-t border-slate-800/80 text-[10px] text-slate-500 font-mono truncate">
-                  Operator: {bandItem.operators}
+                  Pengendali: {bandItem.operators}
                 </div>
               </div>
             );
           })}
         </div>
 
-        {/* Apply Configuration Button */}
+        {/* Butang Terapkan Kunci Jalur */}
         <div className="mt-6 pt-5 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="text-xs text-slate-400 font-mono">
-            Band yang akan dikunci:{' '}
+            Jalur yang akan dikunci:{' '}
             <span className="text-cyan-400 font-semibold">
               {selectedBands.length > 0 ? selectedBands.map((b) => `B${b}`).join(', ') : 'Belum dipilih'}
             </span>
@@ -276,70 +275,70 @@ export const BandLockTab: React.FC<BandLockTabProps> = ({
             {isApplying ? (
               <>
                 <Radio className="w-4 h-4 animate-spin" />
-                <span>Menerapkan ke Modem H809Pro...</span>
+                <span>Menetapkan pada Modem H809Pro...</span>
               </>
             ) : (
               <>
                 <Lock className="w-4 h-4" />
-                <span>Terapkan Kunci Band Sekarang</span>
+                <span>Terapkan Kunci Jalur Sekarang</span>
               </>
             )}
           </button>
         </div>
       </div>
 
-      {/* Operator Frequency Reference Guide */}
+      {/* Rujukan Jalur Telco Malaysia */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
         <h3 className="text-sm font-bold text-white uppercase tracking-wider font-mono mb-3 flex items-center gap-2">
           <ShieldAlert className="w-4 h-4 text-cyan-400" />
-          <span>Panduan Frekuensi Seluler Indonesia untuk H809Pro</span>
+          <span>Panduan Jalur Frekuensi Telco Malaysia untuk H809Pro</span>
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs font-mono">
           <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800">
-            <div className="text-rose-400 font-bold mb-1">Telkomsel / by.U</div>
-            <div className="text-slate-300">B3 (1800 MHz) & B40 (2300 MHz)</div>
-            <p className="text-[11px] text-slate-500 mt-1">
-              Kunci ke B3 atau B40 untuk internet tercepat. B8 (900 MHz) untuk area terpencil.
-            </p>
-          </div>
-
-          <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800">
-            <div className="text-yellow-400 font-bold mb-1">Indosat Ooredoo</div>
+            <div className="text-rose-400 font-bold mb-1">Tune Talk / CelcomDigi</div>
             <div className="text-slate-300">B3 (1800 MHz) & B1 (2100 MHz)</div>
             <p className="text-[11px] text-slate-500 mt-1">
-              B3 memberikan kapasitas pita 20MHz terbesar untuk unduhan maksimal.
+              Kunci ke Jalur 3 untuk kelajuan muat turun paling pantas. Jalur 8 (900 MHz) untuk kawasan luar bandar atau isyarat terhalang.
             </p>
           </div>
 
           <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800">
-            <div className="text-blue-400 font-bold mb-1">XL Axiata / Axis</div>
-            <div className="text-slate-300">B3 (1800 MHz) & B8 (900 MHz)</div>
-            <p className="text-[11px] text-slate-500 mt-1">
-              Kunci B3 untuk ping rendah game online. B8 untuk penetrasi dinding tebal.
-            </p>
-          </div>
-
-          <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800">
-            <div className="text-orange-400 font-bold mb-1">Tri 3 Indonesia</div>
+            <div className="text-emerald-400 font-bold mb-1">Maxis / Hotlink</div>
             <div className="text-slate-300">B3 (1800 MHz) & B1 (2100 MHz)</div>
             <p className="text-[11px] text-slate-500 mt-1">
-              B3 adalah frekuensi utama jaringan Tri di perkotaan dan pinggiran.
+              Jalur 3 memberikan kapasiti lebar jalur terbesar dan kependaman rendah bagi permainan dalam talian.
             </p>
           </div>
 
           <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800">
-            <div className="text-pink-400 font-bold mb-1">Smartfren 4G</div>
+            <div className="text-orange-400 font-bold mb-1">U Mobile</div>
+            <div className="text-slate-300">B3 (1800 MHz) & B1 (2100 MHz)</div>
+            <p className="text-[11px] text-slate-500 mt-1">
+              Jalur 3 ialah tulang belakang rangkaian 4G di kawasan bandar dan perumahan.
+            </p>
+          </div>
+
+          <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800">
+            <div className="text-amber-400 font-bold mb-1">Unifi Mobile</div>
             <div className="text-slate-300">B40 (2300 MHz) & B5 (850 MHz)</div>
             <p className="text-[11px] text-slate-500 mt-1">
-              B40 untuk kecepatan unduh tinggi, B5 untuk sinyal stabil di dalam rumah.
+              Gunakan Jalur 40 untuk data pantas, manakala Jalur 5 untuk isyarat yang mudah menembusi dinding rumah.
             </p>
           </div>
 
           <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800">
-            <div className="text-emerald-400 font-bold mb-1">Tips Sinyal H809Pro</div>
-            <div className="text-slate-300">Gunakan Antena Luar</div>
+            <div className="text-pink-400 font-bold mb-1">Yes 4G / 5G</div>
+            <div className="text-slate-300">Jalur 20 (800 MHz) & Jalur 40</div>
             <p className="text-[11px] text-slate-500 mt-1">
-              Gunakan fitur Beeper Audio di tab Ringkasan untuk mengarahkan antena ke arah tower BTS.
+              Jalur 40 TDD menawarkan kelajuan tanpa wayar yang sangat tinggi.
+            </p>
+          </div>
+
+          <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800">
+            <div className="text-cyan-400 font-bold mb-1">Petua Isyarat H809Pro</div>
+            <div className="text-slate-300">Talaan Antena Luaran</div>
+            <p className="text-[11px] text-slate-500 mt-1">
+              Gunakan ciri Beeper Audio di tab Ringkasan untuk memusing arah antena luaran tepat menghadap menara pemancar telco.
             </p>
           </div>
         </div>
