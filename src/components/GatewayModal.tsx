@@ -51,7 +51,7 @@ export const GatewayModal: React.FC<GatewayModalProps> = ({
     } catch {
       setProbeResult({
         status: 'warn',
-        message: `Tidak dapat mencapai http://${ipInput} secara terus daripada pelayar (dasar sekatan CORS atau sambungan Wi-Fi berbeza). Anda masih boleh menekan 'Buka WebGUI Asal' untuk mengakses secara terus.`,
+        message: `Tidak dapat mencapai http://${ipInput} secara terus daripada pelayar (dasar sekatan CORS atau sambungan Wi-Fi berbeza). Anda masih boleh menekan 'Buka WebGUI Asal' untuk mengakses terus.`,
       });
     } finally {
       setIsProbing(false);
@@ -84,7 +84,7 @@ export const GatewayModal: React.FC<GatewayModalProps> = ({
         </div>
 
         <p className="text-xs text-slate-400 mb-5 leading-relaxed">
-          Tetapkan alamat IP get laluan lalai bagi modem H809Pro anda. Kebiasaannya modem H809Pro menggunakan alamat IP <span className="font-mono text-cyan-300">192.168.100.1</span> atau <span className="font-mono text-cyan-300">192.168.0.1</span>.
+          Tetapkan alamat IP get laluan lalai bagi modem H809Pro anda. Modem anda menggunakan alamat IP <span className="font-mono text-cyan-300">192.168.1.1</span>.
         </p>
 
         <form onSubmit={handleSave} className="space-y-4">
@@ -97,7 +97,7 @@ export const GatewayModal: React.FC<GatewayModalProps> = ({
                 type="text"
                 value={ipInput}
                 onChange={(e) => setIpInput(e.target.value)}
-                placeholder="192.168.100.1"
+                placeholder="192.168.1.1"
                 className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-100 font-mono focus:outline-none focus:border-cyan-500"
                 required
               />
@@ -119,7 +119,7 @@ export const GatewayModal: React.FC<GatewayModalProps> = ({
               Pratetap IP Biasa:
             </span>
             <div className="flex flex-wrap gap-2">
-              {['192.168.100.1', '192.168.0.1', '192.168.8.1', '192.168.1.1'].map((preset) => (
+              {['192.168.1.1', '192.168.100.1', '192.168.0.1', '192.168.8.1'].map((preset) => (
                 <button
                   key={preset}
                   type="button"
