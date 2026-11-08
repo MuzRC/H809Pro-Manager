@@ -29,10 +29,7 @@ jobs:
 
       - name: Pasang Capacitor & Sediakan Android
         run: |
-          # Pastikan fail .ts lama dipadam jika tertinggal
           rm -f capacitor.config.ts
-          
-          # Janakan folder projek android daripada capacitor.config.json
           npx cap add android
 
           # Benarkan sambungan cleartext HTTP untuk IP modem 192.168.1.1
@@ -40,11 +37,11 @@ jobs:
           
           npx cap sync android
 
-      - name: Setup Java JDK 17
+      - name: Setup Java JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: 17
+          java-version: 21
 
       - name: Compile Release APK Guna Gradle
         run: |
