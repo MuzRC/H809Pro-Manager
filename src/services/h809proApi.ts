@@ -2,7 +2,7 @@ import { CapacitorHttp, HttpResponse } from '@capacitor/core';
 import { ModemStatus, SMSMessage, NetworkMode } from '../types/modem';
 import { MALAYSIAN_OPERATORS } from '../data/constants';
 
-// --- FUNGSI MD5 RINGAN (KENDIRI - TANPA PERLU PASANG CRYPTO LUAR) ---
+// --- ENJIN MD5 KENDIRI (ZERO DEPENDENCY SUPAYA CI GITHUB ACTIONS TIDAK SANGKUT) ---
 function md5(string: string): string {
   function rotateLeft(lValue: number, iShiftBits: number) {
     return (lValue << iShiftBits) | (lValue >>> (32 - iShiftBits));
@@ -159,6 +159,11 @@ function md5(string: string): string {
 
 class H809ProApiService {
   private gatewayIp: string = '192.168.1.1';
+  private primaryCgiEndpoint: string = '/xml_action.cgi';
+  private enodeCgiEndpoint: string = '/xml_action.cgi';
+  private authCookie: string = '';
+
+  // Parameter Pengesahan Digest PXA1802
   private username: string = 'admin';
   private password: string = 'admin';
   private realm: string = 'Highwmg';
@@ -167,11 +172,27 @@ class H809ProApiService {
   private gnCount: number = 1;
 
   public setGatewayIp(ip: string) {
-    this.gatewayIp = ip;
+    this.gatewayIp = ip.replace(/^https?:\/\//, '').replace(/\/.*$/, '').trim();
   }
 
   public getGatewayIp(): string {
     return this.gatewayIp;
+  }
+
+  public setPrimaryCgiEndpoint(endpoint: string) {
+    this.primaryCgiEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  }
+
+  public getPrimaryCgiEndpoint(): string {
+    return this.primaryCgiEndpoint;
+  }
+
+  public setEnodeCgiEndpoint(endpoint: string) {
+    this.enodeCgiEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  }
+
+  public getEnodeCgiEndpoint(): string {
+    return this.enodeCgiEndpoint;
   }
 
   public setCredentials(user: string, pass: string) {
@@ -179,7 +200,7 @@ class H809ProApiService {
     this.password = pass;
   }
 
-  // --- 1. PENJANAAN PENGESAHAN DIGEST AUTH (SESUAI CIP PXA1802) ---
+  // --- 1. PENJANAAN PENGESAHAN DIGEST AUTHENTICATION (PXA1802 ASLI) ---
   private generateAuthHeader(method: 'GET' | 'POST'): string {
     const HA1 = md5(`${this.username}:${this.realm}:${this.password}`);
     const HA2 = md5(`${method}:/cgi/xml_action.cgi`);
@@ -197,7 +218,7 @@ class H809ProApiService {
     return `Digest username="${this.username}", realm="${this.realm}", nonce="${this.nonce}", uri="/cgi/xml_action.cgi", response="${digestRes}", qop=${this.qop}, nc=${authCount}, cnonce="${cnonce}"`;
   }
 
-  // --- 2. PENGEKSTRAK / NYAHKOD UCS-2 HEX & MASA SMS ---
+  // --- 2. PENYAHKOD / PENGENKOD STRING HEX UCS-2 (SMS & SSID) ---
   public uniDecode(hexStr: string): string {
     if (!hexStr || hexStr.length % 4 !== 0) return hexStr;
     try {
@@ -238,7 +259,7 @@ class H809ProApiService {
     return `${yy},${m},${d},${h},${min},${s},${tzStr}`;
   }
 
-  // --- 3. PEMANGGIL DASAR GET & POST MODUL DUSTER ---
+  // --- 3. PEMANGGIL MODUL DUSTER (GET / POST) ---
   public async getModuleXml(file: string): Promise<string | null> {
     try {
       const response: HttpResponse = await CapacitorHttp.get({
@@ -280,7 +301,7 @@ class H809ProApiService {
     }
   }
 
-  // --- 4. UJI SAMBUNGAN GET LALUAN ---
+  // --- 4. UJI SAMBUNGAN GET LALUAN (PING GATEWAY) ---
   public async pingGateway(): Promise<boolean> {
     try {
       const res: HttpResponse = await CapacitorHttp.get({
@@ -290,11 +311,138 @@ class H809ProApiService {
       });
       return res.status === 200;
     } catch {
-      return false;
+      // Sandaran ke fetch jika diuji dari pelayar web
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+        await fetch(`http://${this.gatewayIp}/xml_action.cgi?method=get&module=duster&file=status1`, {
+          mode: 'no-cors',
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        return true;
+      } catch {
+        return false;
+      }
     }
   }
 
-  // --- 5. TARIK TELEMETRI & STATUS (FILE=STATUS1) ---
+  // --- 5. UJIAN DIAGNOSTIK ENDPOINT CGI ---
+  public async testCgiEndpoint(endpointPath: string): Promise<{
+    success: boolean;
+    latencyMs: number;
+    status: number;
+    snippet: string;
+  }> {
+    const cleanPath = endpointPath.startsWith('/') ? endpointPath : `/${endpointPath}`;
+    const targetUrl = `http://${this.gatewayIp}${cleanPath}`;
+    const startTime = performance.now();
+
+    try {
+      const res: HttpResponse = await CapacitorHttp.get({
+        url: targetUrl,
+        headers: {
+          Authorization: this.generateAuthHeader('GET'),
+        },
+        connectTimeout: 3000,
+        readTimeout: 3000,
+      });
+      const elapsed = Math.round(performance.now() - startTime);
+      const dataStr = typeof res.data === 'string' ? res.data : JSON.stringify(res.data || '');
+      return {
+        success: res.status >= 200 && res.status < 500,
+        latencyMs: elapsed,
+        status: res.status,
+        snippet: dataStr.slice(0, 160) || 'Respons diterima (kosong)',
+      };
+    } catch (err: unknown) {
+      const elapsed = Math.round(performance.now() - startTime);
+      const message = err instanceof Error ? err.message : 'Gagal menghubungi';
+      return {
+        success: false,
+        latencyMs: elapsed,
+        status: 0,
+        snippet: `Sekatan / ralat sambungan: ${message}`,
+      };
+    }
+  }
+
+  // --- 6. PENGHANTAR PERMINTAAN CGI (COMPATIBILITY WRAPPER) ---
+  public async sendCgiRequest(
+    endpoint: string,
+    params: Record<string, string | number> | string,
+    method: 'GET' | 'POST' = 'POST'
+  ): Promise<string> {
+    const cleanEp = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    let url = `http://${this.gatewayIp}${cleanEp}`;
+    let bodyData: string = '';
+
+    if (typeof params === 'string') {
+      bodyData = params;
+    } else {
+      const queryParams = new URLSearchParams();
+      Object.entries(params).forEach(([k, v]) => queryParams.append(k, String(v)));
+      if (method === 'GET') {
+        url += `?${queryParams.toString()}`;
+      } else {
+        bodyData = queryParams.toString();
+      }
+    }
+
+    try {
+      if (method === 'POST') {
+        const res: HttpResponse = await CapacitorHttp.post({
+          url,
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            Authorization: this.generateAuthHeader('POST'),
+          },
+          data: bodyData,
+          connectTimeout: 4000,
+          readTimeout: 4000,
+        });
+        return typeof res.data === 'string' ? res.data : JSON.stringify(res.data);
+      } else {
+        const res: HttpResponse = await CapacitorHttp.get({
+          url,
+          headers: {
+            Authorization: this.generateAuthHeader('GET'),
+          },
+          connectTimeout: 4000,
+          readTimeout: 4000,
+        });
+        return typeof res.data === 'string' ? res.data : JSON.stringify(res.data);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Sambungan terputus';
+      return `RALAT_CGI: ${msg}`;
+    }
+  }
+
+  // --- 7. EKSEKUSI ARAHAN AT MELALUI MODUL DUSTER AT_CMD ---
+  public async executeATCommand(command: string): Promise<string> {
+    const cleanCmd = encodeURIComponent(command.trim());
+    try {
+      const response: HttpResponse = await CapacitorHttp.get({
+        url: `http://${this.gatewayIp}/xml_action.cgi?method=set&module=duster&file=at_cmd&cmd=${cleanCmd}`,
+        headers: {
+          Authorization: this.generateAuthHeader('GET'),
+        },
+        connectTimeout: 4000,
+        readTimeout: 4000,
+      });
+
+      if (response.status === 200 && response.data) {
+        return response.data.toString().replace(/<[^>]+>/g, ' ').trim() || 'OK';
+      }
+      return `RALAT: HTTP ${response.status}`;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Gagal berhubung';
+      return `RALAT_AT: ${msg}`;
+    }
+  }
+
+  // --- 8. TARIK TELEMETRI LANGSUNG DARIPADA MODUL DUSTER STATUS1 ---
   public async fetchLiveStatus(): Promise<Partial<ModemStatus>> {
     const rawXml = await this.getModuleXml('status1');
     if (!rawXml) return {};
@@ -304,6 +452,7 @@ class H809ProApiService {
       return match ? match[1].trim() : '';
     };
 
+    // Bacaan Isyarat Mentah PXA1802
     const rawRssi = parseInt(getTag('rssi') || '37', 10);
     const csq = Math.min(31, Math.round((rawRssi / 100) * 31)) || 22;
     const estimatedRsrp = -113 + csq * 2;
@@ -320,20 +469,25 @@ class H809ProApiService {
         supportedBands: [1, 3, 7, 8],
       };
 
+    // Pengiraan Kuota Terkumpul (Bytes ke GB)
     const rxBytesAll = parseInt(getTag('rx_byte_all') || '0', 10);
     const txBytesAll = parseInt(getTag('tx_byte_all') || '0', 10);
     const totalGb = parseFloat(((rxBytesAll + txBytesAll) / (1024 * 1024 * 1024)).toFixed(2));
 
+    // Kadar Kelajuan (KB/s)
     const rxRate = Math.round(parseInt(getTag('rx_rate') || '0', 10) / 1024);
     const txRate = Math.round(parseInt(getTag('tx_rate') || '0', 10) / 1024);
 
+    // Tempoh Masa Aktif (Uptime)
     const runMinutes = parseInt(getTag('run_minutes') || '0', 10);
     const runSeconds = parseInt(getTag('run_seconds') || '0', 10);
     const uptimeSec = runMinutes * 60 + runSeconds;
 
+    // Nyahkod SSID Wi-Fi
     const rawSsid = getTag('ssid');
     const wifiSsid = rawSsid ? this.uniDecode(rawSsid) : '4G-MIFI_F0C7';
 
+    // Status Bateri & Cas
     const batteryVolt = parseInt(getTag('Battery_voltage') || '99', 10);
     const isCharging = getTag('Battery_charging') === '1';
 
@@ -371,14 +525,60 @@ class H809ProApiService {
     };
   }
 
-  // --- 6. PENGURUSAN SMS (FILE=MESSAGE DENGAN UNIENCODE/UNIDECODE) ---
+  // --- 9. KUNCI JALUR LTE (CUSTOMCONFIG BITMASK 32-BIT) ---
+  public async applyBandLock(bands: number[], _mode?: NetworkMode): Promise<boolean> {
+    let ltebandl = 0;
+    let ltebandh = 0;
+
+    // Jika senarai kosong, pulihkan ke mod AUTO (Semua Jalur)
+    if (bands.length === 0) {
+      ltebandl = 134742229;
+      ltebandh = 416;
+      const autoPayload = `<RGW><customconfig><ltebandl>${ltebandl}</ltebandl><ltebandh>${ltebandh}</ltebandh><ltebandext>0</ltebandext><band_current>0</band_current><act_current>0</act_current></customconfig></RGW>`;
+      return await this.postModuleXml('customconfig', autoPayload);
+    }
+
+    // Kira bitmask 32-bit bagi setiap band
+    for (const b of bands) {
+      if (b >= 1 && b <= 32) {
+        ltebandl += Math.pow(2, b - 1);
+      } else if (b >= 33 && b <= 64) {
+        ltebandh += Math.pow(2, b - 33);
+      }
+    }
+
+    const lockPayload = `<RGW><customconfig><ltebandl>${ltebandl}</ltebandl><ltebandh>${ltebandh}</ltebandh><ltebandext>0</ltebandext><band_current>1</band_current><act_current>0</act_current></customconfig></RGW>`;
+
+    return await this.postModuleXml('customconfig', lockPayload);
+  }
+
+  // --- 10. BUT SEMULA PERKAKASAN (REBOOT) ---
+  public async rebootModem(): Promise<boolean> {
+    try {
+      const res: HttpResponse = await CapacitorHttp.get({
+        url: `http://${this.gatewayIp}/xml_action.cgi?method=get&file=restore_defaults&command=reboot`,
+        headers: {
+          Authorization: this.generateAuthHeader('GET'),
+        },
+        connectTimeout: 3000,
+      });
+      return res.status === 200;
+    } catch {
+      return false;
+    }
+  }
+
+  // --- 11. DAIL KOD USSD ---
+  public async dialUSSD(code: string): Promise<string> {
+    return await this.executeATCommand(`AT+CUSD=1,"${code}",15`);
+  }
+
+  // --- 12. PENGURUSAN SMS SEBENAR (FILE=MESSAGE DENGAN UNIENCODE/UNIDECODE) ---
   public async fetchSMSInbox(): Promise<SMSMessage[]> {
-    // 1. Minta modul sediakan senarai SMS dari simpanan lokal
     const preparePayload =
       '<RGW><message><flag><message_flag>GET_RCV_SMS_LOCAL</message_flag></flag><get_message><page_number>1</page_number></get_message></message></RGW>';
     await this.postModuleXml('message', preparePayload);
 
-    // 2. Tarik XML senarai mesej sebenar
     const smsXml = await this.getModuleXml('message');
     if (!smsXml) return [];
 
@@ -405,7 +605,7 @@ class H809ProApiService {
 
       messages.push({
         id,
-        sender: sender || 'Telco',
+        sender: sender || 'Pemberitahu',
         timestamp: recvTime.replace(/,/g, '/'),
         content,
         isRead: status === '1',
@@ -431,71 +631,6 @@ class H809ProApiService {
     const payload = `<RGW><message><flag><message_flag>DELETE_SMS</message_flag><sms_cmd>6</sms_cmd></flag><get_message><tags>12</tags><mem_store>1</mem_store></get_message><set_message><delete_message_id>${smsId},</delete_message_id></set_message></message></RGW>`;
 
     return await this.postModuleXml('message', payload);
-  }
-
-  // --- 7. KUNCI JALUR LTE (FILE=CUSTOMCONFIG - FORMULA BITMASK 32-BIT) ---
-  public async applyBandLock(bands: number[], _mode: NetworkMode = '4G_ONLY'): Promise<boolean> {
-    let ltebandl = 0;
-    let ltebandh = 0;
-
-    // Jika senarai kosong, kembalikan ke AUTO (Semua Band)
-    if (bands.length === 0) {
-      ltebandl = 134742229;
-      ltebandh = 416;
-      const autoPayload = `<RGW><customconfig><ltebandl>${ltebandl}</ltebandl><ltebandh>${ltebandh}</ltebandh><ltebandext>0</ltebandext><band_current>0</band_current><act_current>0</act_current></customconfig></RGW>`;
-      return await this.postModuleXml('customconfig', autoPayload);
-    }
-
-    // Kira bitmask untuk setiap band yang dipilih
-    for (const b of bands) {
-      if (b >= 1 && b <= 32) {
-        ltebandl += Math.pow(2, b - 1);
-      } else if (b >= 33 && b <= 64) {
-        ltebandh += Math.pow(2, b - 33);
-      }
-    }
-
-    const lockPayload = `<RGW><customconfig><ltebandl>${ltebandl}</ltebandl><ltebandh>${ltebandh}</ltebandh><ltebandext>0</ltebandext><band_current>1</band_current><act_current>0</act_current></customconfig></RGW>`;
-
-    return await this.postModuleXml('customconfig', lockPayload);
-  }
-
-  // --- 8. BUT SEMULA PERKAKASAN & ARAHAN SISTEM ---
-  public async rebootModem(): Promise<boolean> {
-    try {
-      const res: HttpResponse = await CapacitorHttp.get({
-        url: `http://${this.gatewayIp}/xml_action.cgi?method=get&file=restore_defaults&command=reboot`,
-        headers: {
-          Authorization: this.generateAuthHeader('GET'),
-        },
-        connectTimeout: 3000,
-      });
-      return res.status === 200;
-    } catch {
-      return false;
-    }
-  }
-
-  public async executeATCommand(command: string): Promise<string> {
-    const cleanCmd = encodeURIComponent(command.trim());
-    try {
-      const response: HttpResponse = await CapacitorHttp.get({
-        url: `http://${this.gatewayIp}/xml_action.cgi?method=set&module=duster&file=at_cmd&cmd=${cleanCmd}`,
-        headers: {
-          Authorization: this.generateAuthHeader('GET'),
-        },
-        connectTimeout: 4000,
-        readTimeout: 4000,
-      });
-
-      if (response.status === 200 && response.data) {
-        return response.data.toString().replace(/<[^>]+>/g, ' ').trim() || 'OK';
-      }
-      return `RALAT: HTTP ${response.status}`;
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Gagal berhubung';
-      return `RALAT_RANGKAIAN: ${msg}`;
-    }
   }
 }
 
