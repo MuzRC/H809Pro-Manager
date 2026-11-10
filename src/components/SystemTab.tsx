@@ -11,6 +11,7 @@ import {
   Sliders,
 } from 'lucide-react';
 import { ModemStatus } from '../types/modem';
+import { BatteryHealthView } from './BatteryHealthView';
 
 interface SystemTabProps {
   status: ModemStatus;
@@ -154,21 +155,21 @@ export const SystemTab: React.FC<SystemTabProps> = ({
             </div>
           </div>
 
-          {/* Kad Maklumat Mod Pintasan Bateri */}
-          <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 mt-4">
-            <div className="flex items-center justify-between mb-2">
+          {/* Kad Ringkasan Bateri & Mod Pintasan */}
+          <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 mt-4 space-y-3">
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Zap className="w-4 h-4 text-amber-400" />
                 <span className="text-xs font-bold text-white font-mono">
-                  Mod Pintasan Bateri (USB 5V Terus)
+                  Pengurusan Kuasa Bateri & Pintasan
                 </span>
               </div>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                AKTIF 24 JAM
+                PINTASAN 5V AKTIF
               </span>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Modem beroperasi secara terus daripada bekalan kuasa pengecas/penyesuai USB tanpa memerlukan bateri dipasang. Ini mengelakkan risiko bateri kembung dan menjamin keselamatan penggunaan hotspot secara berterusan sepanjang hari.
+              Modem beroperasi daripada bekalan kuasa penyesuai USB tanpa membebankan sel bateri. Semak analisis terperinci baki kitaran kuasa dan sejarah cas pada panel di bawah.
             </p>
           </div>
         </div>
@@ -254,6 +255,9 @@ export const SystemTab: React.FC<SystemTabProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Paparan Terperinci Kesihatan Bateri, Anggaran Kitaran Kuasa & Sejarah Pengecasan */}
+      <BatteryHealthView initialData={status.batteryHealth} />
     </div>
   );
 };

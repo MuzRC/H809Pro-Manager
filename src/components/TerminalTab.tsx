@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Terminal, Send, Trash2, Copy, Check, HelpCircle, Sparkles } from 'lucide-react';
+import { Terminal, Send, Trash2, Copy, Check, HelpCircle, Sparkles, Globe } from 'lucide-react';
 import { ATCommandLog } from '../types/modem';
-import { COMMON_AT_COMMANDS } from '../data/constants';
+import { COMMON_AT_COMMANDS, COMMON_CGI_COMMANDS } from '../data/constants';
 
 interface TerminalTabProps {
   logs: ATCommandLog[];
@@ -15,6 +15,7 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({
   onClearLogs,
 }) => {
   const [inputCmd, setInputCmd] = useState('');
+  const [activeCategory, setActiveCategory] = useState<'AT' | 'CGI'>('AT');
   const [copied, setCopied] = useState(false);
   const terminalEndRef = useRef<HTMLDivElement>(null);
 
@@ -49,11 +50,11 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({
             <div className="flex items-center gap-2 mb-1">
               <Terminal className="w-5 h-5 text-cyan-400" />
               <h2 className="text-lg font-bold text-white tracking-tight">
-                Konsol & Terminal Arahan AT H809Pro
+                Konsol & Terminal Arahan AT / CGI-BIN H809Pro
               </h2>
             </div>
             <p className="text-xs text-slate-400">
-              Hantar arahan AT secara terus ke modem untuk diagnostik mendalam, semakan penderia perkakasan, status kad SIM, dan pengurusan parameter rangkaian.
+              Hantar arahan AT secara terus atau laksanakan skrip CGI-BIN (/cgi-bin/qcmap_web_cgi & /cgi-bin/enode.cgi) untuk diagnostik perkakasan dan semakan rangkaian modem.
             </p>
           </div>
 
@@ -83,36 +84,74 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Paparan Skrin Terminal & Input */}
         <div className="lg:col-span-8 bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col">
-          {/* Bar Pintasan Arahan AT */}
-          <div className="mb-3">
-            <div className="text-[11px] font-mono text-slate-400 mb-2 flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-cyan-400" />
-              <span>Pintasan Arahan AT Popular:</span>
+          {/* Suis Kategori Pintasan: Arahan AT vs Skrip CGI */}
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 p-1 bg-slate-950 rounded-lg border border-slate-800 text-xs font-mono">
+              <button
+                type="button"
+                onClick={() => setActiveCategory('AT')}
+                className={`px-3 py-1 rounded transition-colors flex items-center gap-1.5 ${
+                  activeCategory === 'AT'
+                    ? 'bg-slate-800 text-cyan-300 font-bold'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Arahan AT</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveCategory('CGI')}
+                className={`px-3 py-1 rounded transition-colors flex items-center gap-1.5 ${
+                  activeCategory === 'CGI'
+                    ? 'bg-slate-800 text-amber-300 font-bold'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Globe className="w-3.5 h-3.5 text-amber-400" />
+                <span>Skrip CGI-BIN</span>
+              </button>
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              {COMMON_AT_COMMANDS.slice(0, 6).map((item) => (
-                <button
-                  key={item.cmd}
-                  onClick={() => handleQuickCmd(item.cmd)}
-                  className="px-2.5 py-1 text-xs font-mono bg-slate-950 hover:bg-cyan-950/50 text-cyan-300 hover:text-cyan-200 border border-slate-800 hover:border-cyan-700 rounded transition-colors"
-                >
-                  {item.cmd}
-                </button>
-              ))}
-            </div>
+
+            <span className="text-[11px] font-mono text-slate-500 hidden sm:inline">
+              Klik butang untuk hantar terus
+            </span>
+          </div>
+
+          {/* Bar Butang Pintasan Mengikut Kategori */}
+          <div className="mb-3 flex flex-wrap gap-1.5">
+            {activeCategory === 'AT'
+              ? COMMON_AT_COMMANDS.slice(0, 6).map((item) => (
+                  <button
+                    key={item.cmd}
+                    onClick={() => handleQuickCmd(item.cmd)}
+                    className="px-2.5 py-1 text-xs font-mono bg-slate-950 hover:bg-cyan-950/50 text-cyan-300 hover:text-cyan-200 border border-slate-800 hover:border-cyan-700 rounded transition-colors"
+                  >
+                    {item.cmd}
+                  </button>
+                ))
+              : COMMON_CGI_COMMANDS.map((item) => (
+                  <button
+                    key={item.cmd}
+                    onClick={() => handleQuickCmd(item.cmd)}
+                    className="px-2.5 py-1 text-xs font-mono bg-slate-950 hover:bg-amber-950/50 text-amber-300 hover:text-amber-200 border border-slate-800 hover:border-amber-700 rounded transition-colors"
+                  >
+                    {item.cmd.split('?')[0].replace('/cgi-bin/', '')} ({item.desc.slice(0, 16)}...)
+                  </button>
+                ))}
           </div>
 
           {/* Ruang Konsol Terminal */}
           <div className="bg-slate-950 border border-slate-800 rounded-lg p-4 font-mono text-xs text-slate-300 min-h-[380px] max-h-[500px] overflow-y-auto space-y-4">
             <div className="text-slate-500 pb-2 border-b border-slate-900 text-[11px]">
-              Konsol Bersiri AT Modem H809Pro [Baud: 115200 8N1]
+              Konsol Bersiri AT & Skrip CGI Modem H809Pro [192.168.1.1]
               <br />
-              Taip arahan AT kemudian tekan butang Hantar atau Enter pada papan kekunci.
+              Menyokong format AT (contoh: AT+CSQ) dan laluan CGI (/cgi-bin/qcmap_web_cgi atau /cgi-bin/enode.cgi).
             </div>
 
             {logs.length === 0 ? (
               <div className="text-slate-600 italic py-12 text-center">
-                Terminal sedia. Klik butang pintasan di atas atau masukkan arahan AT baharu di bawah.
+                Terminal sedia. Klik butang pintasan di atas atau masukkan arahan AT / CGI di bawah.
               </div>
             ) : (
               logs.map((log) => (
@@ -144,7 +183,7 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({
               </span>
               <input
                 type="text"
-                placeholder="Taip arahan AT (contoh: AT+CSQ, ATI, AT+TEMP?)..."
+                placeholder="Taip arahan (contoh: AT+CSQ atau /cgi-bin/qcmap_web_cgi?action=get_status)..."
                 value={inputCmd}
                 onChange={(e) => setInputCmd(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-8 pr-3 py-2 text-xs text-slate-100 font-mono placeholder-slate-500 focus:outline-none focus:border-cyan-500"
@@ -162,29 +201,51 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({
           </form>
         </div>
 
-        {/* Panel Rujukan & Dokumentasi Arahan AT */}
-        <div className="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-xl p-5">
-          <div className="flex items-center gap-2 mb-3">
+        {/* Panel Rujukan & Dokumentasi Arahan */}
+        <div className="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+          <div className="flex items-center gap-2">
             <HelpCircle className="w-4 h-4 text-cyan-400" />
             <h3 className="text-sm font-bold text-white uppercase tracking-wider font-mono">
-              Buku Rujukan Arahan AT
+              Rujukan Arahan H809Pro
             </h3>
           </div>
-          <p className="text-xs text-slate-400 mb-4">
-            Senarai arahan AT yang disokong oleh cipset modem H809Pro:
-          </p>
 
-          <div className="space-y-3 font-mono text-xs">
-            {COMMON_AT_COMMANDS.map((item) => (
-              <div
-                key={item.cmd}
-                onClick={() => handleQuickCmd(item.cmd)}
-                className="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800 hover:border-cyan-700/60 cursor-pointer transition-colors"
-              >
-                <div className="text-cyan-300 font-bold mb-0.5">{item.cmd}</div>
-                <div className="text-[11px] text-slate-400">{item.desc}</div>
-              </div>
-            ))}
+          <div>
+            <div className="text-xs font-bold text-cyan-300 font-mono mb-2 flex items-center gap-1">
+              <Sparkles className="w-3 h-3 text-cyan-400" />
+              <span>Arahan AT Utama:</span>
+            </div>
+            <div className="space-y-2 font-mono text-xs">
+              {COMMON_AT_COMMANDS.slice(0, 5).map((item) => (
+                <div
+                  key={item.cmd}
+                  onClick={() => handleQuickCmd(item.cmd)}
+                  className="p-2 rounded-lg bg-slate-950/70 border border-slate-800 hover:border-cyan-700/60 cursor-pointer transition-colors"
+                >
+                  <div className="text-cyan-300 font-bold mb-0.5">{item.cmd}</div>
+                  <div className="text-[11px] text-slate-400">{item.desc}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-slate-800">
+            <div className="text-xs font-bold text-amber-300 font-mono mb-2 flex items-center gap-1">
+              <Globe className="w-3 h-3 text-amber-400" />
+              <span>Skrip CGI-BIN Modem:</span>
+            </div>
+            <div className="space-y-2 font-mono text-xs">
+              {COMMON_CGI_COMMANDS.map((item) => (
+                <div
+                  key={item.cmd}
+                  onClick={() => handleQuickCmd(item.cmd)}
+                  className="p-2 rounded-lg bg-slate-950/70 border border-slate-800 hover:border-amber-700/60 cursor-pointer transition-colors"
+                >
+                  <div className="text-amber-300 font-bold text-[11px] break-all mb-0.5">{item.cmd}</div>
+                  <div className="text-[11px] text-slate-400">{item.desc}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

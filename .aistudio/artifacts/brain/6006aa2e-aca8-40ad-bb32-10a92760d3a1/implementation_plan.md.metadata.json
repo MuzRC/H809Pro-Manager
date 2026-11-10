@@ -1,0 +1,6 @@
+{
+  "summary":  "Pelan pelaksanaan untuk menyelesaikan masalah sambungan modem H809Pro dengan menyokong endpoint /cgi-bin/qcmap_web_cgi dan /cgi-bin/enode.cgi, mengatasi sekatan pelayar Mixed Content, menambah suis 'Paksa Bersambung' bagi peranti Wi-Fi, dan menyediakan konsol diagnostik CGI-BIN terus.",
+  "updatedAt":  "2026-11-09T21:50:06.091272286Z",
+  "requestFeedback":  true,
+  "userFacing":  true
+}

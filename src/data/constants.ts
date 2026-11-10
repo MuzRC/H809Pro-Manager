@@ -238,3 +238,12 @@ export const COMMON_AT_COMMANDS = [
   { cmd: 'AT+CBC', desc: 'Status Bekalan Kuasa / Pengecasan Bateri / Pintasan USB' },
   { cmd: 'AT+RESET', desc: 'Arahan But Semula (Reboot) Modem' },
 ];
+
+export const COMMON_CGI_COMMANDS = [
+  { cmd: '/cgi-bin/qcmap_web_cgi?action=get_network_info', desc: 'Semak Status Rangkaian & Data WAN' },
+  { cmd: '/cgi-bin/enode.cgi?action=get_status', desc: 'Semak Status Isyarat LTE & eNodeB' },
+  { cmd: '/cgi-bin/qcmap_web_cgi?action=get_device_info', desc: 'Spesifikasi & Versi Perisian Modem' },
+  { cmd: '/cgi-bin/enode.cgi?action=get_cell_info', desc: 'Maklumat Cell ID, PCI & Jalur Semasa' },
+  { cmd: '/cgi-bin/qcmap_web_cgi?action=get_sim_status', desc: 'Status Pendaftaran Kad SIM' },
+];
+

@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { X, Globe, ExternalLink, CheckCircle2, AlertCircle, RefreshCw, Radio } from 'lucide-react';
+import { X, Globe, ExternalLink, CheckCircle2, AlertCircle, RefreshCw, Wifi, Lock, User, Shield } from 'lucide-react';
+import { h809proApi } from '../services/h809proApi';
 
 interface GatewayModalProps {
   isOpen: boolean;
   onClose: () => void;
   gatewayIp: string;
   onSaveGatewayIp: (ip: string) => void;
-  connectionMode: 'live' | 'simulated';
-  onChangeConnectionMode: (mode: 'live' | 'simulated') => void;
+  hasUserConfirmedWifi?: boolean;
+  onToggleConfirmWifi?: (confirmed: boolean) => void;
 }
 
 export const GatewayModal: React.FC<GatewayModalProps> = ({
@@ -15,10 +16,12 @@ export const GatewayModal: React.FC<GatewayModalProps> = ({
   onClose,
   gatewayIp,
   onSaveGatewayIp,
-  connectionMode,
-  onChangeConnectionMode,
+  hasUserConfirmedWifi = false,
+  onToggleConfirmWifi,
 }) => {
   const [ipInput, setIpInput] = useState(gatewayIp);
+  const [userInput, setUserInput] = useState(h809proApi.getUsername() || 'admin');
+  const [passInput, setPassInput] = useState(h809proApi.getPassword() || 'admin');
   const [isProbing, setIsProbing] = useState(false);
   const [probeResult, setProbeResult] = useState<{
     status: 'success' | 'warn' | 'error';
@@ -31,36 +34,30 @@ export const GatewayModal: React.FC<GatewayModalProps> = ({
     setIsProbing(true);
     setProbeResult(null);
 
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000);
+    h809proApi.setGatewayIp(ipInput);
+    h809proApi.setCredentials(userInput, passInput);
 
-      const startTime = performance.now();
-      await fetch(`http://${ipInput}/favicon.ico`, {
-        mode: 'no-cors',
-        signal: controller.signal,
-      }).catch(() => null);
+    const test = await h809proApi.testCgiEndpoint();
 
-      clearTimeout(timeoutId);
-      const elapsed = Math.round(performance.now() - startTime);
-
+    if (test.success) {
       setProbeResult({
         status: 'success',
-        message: `Maklum balas dikesan daripada http://${ipInput} (Kependaman: ~${elapsed}ms). Modem H809Pro berjaya dicapai.`,
+        message: `Berjaya! Maklum balas diterima daripada modem H809Pro di http://${ipInput} (Kependaman: ~${test.latencyMs}ms). Pengesahan Digest Auth aktif.`,
       });
-    } catch {
+    } else {
       setProbeResult({
         status: 'warn',
-        message: `Tidak dapat mencapai http://${ipInput} secara terus daripada pelayar (dasar sekatan CORS atau sambungan Wi-Fi berbeza). Anda masih boleh menekan 'Buka WebGUI Asal' untuk mengakses terus.`,
+        message: `Pelayar web menyekat permintaan terus ke http://${ipInput} (dasar keselamatan Mixed Content HTTPS ke IP peribadi). Sekiranya telefon anda telah disambungkan ke hotspot Wi-Fi modem, tandakan pilihan 'Sahkan Sambungan Wi-Fi' di bawah untuk membuka papan pemuka.`,
       });
-    } finally {
-      setIsProbing(false);
     }
+
+    setIsProbing(false);
   };
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (ipInput.trim()) {
+      h809proApi.setCredentials(userInput.trim(), passInput.trim());
       onSaveGatewayIp(ipInput.trim());
       onClose();
     }
@@ -68,7 +65,7 @@ export const GatewayModal: React.FC<GatewayModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
@@ -79,12 +76,12 @@ export const GatewayModal: React.FC<GatewayModalProps> = ({
         <div className="flex items-center gap-2 mb-2">
           <Globe className="w-5 h-5 text-cyan-400" />
           <h3 className="text-lg font-bold text-white tracking-tight">
-            Konfigurasi Get Laluan & IP Modem H809Pro
+            Konfigurasi Get Laluan & Log Masuk H809Pro
           </h3>
         </div>
 
         <p className="text-xs text-slate-400 mb-5 leading-relaxed">
-          Tetapkan alamat IP get laluan lalai bagi modem H809Pro anda. Modem anda menggunakan alamat IP <span className="font-mono text-cyan-300">192.168.1.1</span>.
+          Tetapkan alamat IP get laluan dan maklumat log masuk Digest Auth bagi modem H809Pro anda. Modem ini menggunakan alamat lalai <span className="font-mono text-cyan-300">192.168.1.1</span>.
         </p>
 
         <form onSubmit={handleSave} className="space-y-4">
@@ -136,6 +133,49 @@ export const GatewayModal: React.FC<GatewayModalProps> = ({
             </div>
           </div>
 
+          {/* Kredensial Log Masuk Digest Auth (PXA1802) */}
+          <div className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800/80 space-y-3">
+            <div className="flex items-center gap-2 text-xs font-bold text-cyan-300 font-mono">
+              <Shield className="w-4 h-4 text-cyan-400" />
+              <span>Pengesahan Log Masuk Digest Auth (PXA1802)</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
+              <div>
+                <label className="block text-[11px] text-slate-400 mb-1 flex items-center gap-1">
+                  <User className="w-3 h-3 text-slate-500" />
+                  <span>Nama Pengguna WebGUI:</span>
+                </label>
+                <input
+                  type="text"
+                  value={userInput}
+                  onChange={(e) => setUserInput(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-cyan-500"
+                  placeholder="admin"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] text-slate-400 mb-1 flex items-center gap-1">
+                  <Lock className="w-3 h-3 text-slate-500" />
+                  <span>Kata Laluan WebGUI:</span>
+                </label>
+                <input
+                  type="password"
+                  value={passInput}
+                  onChange={(e) => setPassInput(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-cyan-500"
+                  placeholder="admin"
+                  required
+                />
+              </div>
+            </div>
+            <p className="text-[11px] text-slate-500 font-mono">
+              Kredensial ini digunakan untuk menjana token Digest MD5 bagi capaian modul duster (xml_action.cgi) secara automatik.
+            </p>
+          </div>
+
           {probeResult && (
             <div
               className={`p-3 rounded-lg border text-xs flex items-start gap-2 ${
@@ -153,57 +193,36 @@ export const GatewayModal: React.FC<GatewayModalProps> = ({
             </div>
           )}
 
-          {/* Suis Mod Operasi */}
-          <div className="pt-2 border-t border-slate-800">
-            <span className="text-xs font-mono text-slate-300 block mb-2">
-              Mod Operasi Aplikasi:
-            </span>
-            <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-              <button
-                type="button"
-                onClick={() => onChangeConnectionMode('simulated')}
-                className={`p-2.5 rounded-lg border text-left transition-all ${
-                  connectionMode === 'simulated'
-                    ? 'bg-cyan-950/40 border-cyan-500 text-cyan-300'
-                    : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <div className="font-bold flex items-center gap-1.5">
-                  <Radio className="w-3.5 h-3.5" />
-                  <span>Simulator & Ujian</span>
+          {/* Suis Pengesahan Wi-Fi (Bypass Sekatan Pelayar) */}
+          {onToggleConfirmWifi && (
+            <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-800 flex items-start gap-3">
+              <input
+                type="checkbox"
+                id="confirmWifiToggle"
+                checked={hasUserConfirmedWifi}
+                onChange={(e) => onToggleConfirmWifi(e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded text-cyan-500 bg-slate-900 border-slate-700 focus:ring-0 cursor-pointer"
+              />
+              <label htmlFor="confirmWifiToggle" className="cursor-pointer">
+                <div className="text-xs font-bold text-slate-200 font-mono">
+                  Sahkan Peranti Ini Telah Bersambung ke Wi-Fi H809Pro
                 </div>
-                <div className="text-[10px] text-slate-500 mt-0.5">
-                  Simulasi interaktif penuh tanpa perlu bersambung ke Wi-Fi modem
+                <div className="text-[11px] text-slate-400 leading-relaxed mt-0.5">
+                  Tandakan ini jika telefon anda telah disambungkan ke hotspot Wi-Fi modem supaya amaran tiada sambungan tidak menghalang penggunaan aplikasi.
                 </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onChangeConnectionMode('live')}
-                className={`p-2.5 rounded-lg border text-left transition-all ${
-                  connectionMode === 'live'
-                    ? 'bg-cyan-950/40 border-cyan-500 text-cyan-300'
-                    : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <div className="font-bold flex items-center gap-1.5">
-                  <Globe className="w-3.5 h-3.5" />
-                  <span>Get Laluan Langsung</span>
-                </div>
-                <div className="text-[10px] text-slate-500 mt-0.5">
-                  Menghubungkan terus ke alamat IP http://{ipInput}
-                </div>
-              </button>
+              </label>
             </div>
-          </div>
+          )}
 
-          {/* Petua Log Masuk Lalai */}
-          <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800/80 text-[11px] font-mono text-slate-400">
-            <div className="text-slate-300 font-semibold mb-1">
-              Maklumat Log Masuk Lalai Modem H809Pro:
+          {/* Maklumat Sambungan Terus Perkakasan */}
+          <div className="p-3.5 rounded-lg bg-slate-950/80 border border-cyan-800/60 text-xs font-mono">
+            <div className="flex items-center gap-2 text-cyan-300 font-semibold mb-1">
+              <Wifi className="w-4 h-4 text-cyan-400" />
+              <span>Protokol Perkakasan PXA1802 Modul Duster</span>
             </div>
-            <div>Nama pengguna: <span className="text-cyan-400 font-bold">admin</span></div>
-            <div>Kata laluan: <span className="text-cyan-400 font-bold">admin</span> atau <span className="text-cyan-400 font-bold">admin809</span></div>
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              Aplikasi ini berhubung secara langsung ke modem H809Pro di <span className="text-white font-bold">http://{ipInput}</span> melalui xml_action.cgi dengan penyulitan kata laluan Digest MD5.
+            </p>
           </div>
 
           <div className="flex items-center justify-between pt-3 border-t border-slate-800">
@@ -229,7 +248,7 @@ export const GatewayModal: React.FC<GatewayModalProps> = ({
                 type="submit"
                 className="px-5 py-2 text-xs font-bold text-slate-950 bg-cyan-400 hover:bg-cyan-300 rounded-lg transition-colors"
               >
-                Simpan IP
+                Simpan Konfigurasi
               </button>
             </div>
           </div>

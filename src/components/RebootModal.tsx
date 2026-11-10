@@ -38,11 +38,11 @@ export const RebootModal: React.FC<RebootModalProps> = ({
             </div>
 
             <h3 className="text-lg font-bold text-white tracking-tight mb-2">
-              Mulai Ulang (Reboot) Modem H809Pro?
+              But Semula (Reboot) Modem H809Pro?
             </h3>
 
             <p className="text-xs text-slate-400 mb-6 leading-relaxed">
-              Koneksi internet dan Wi-Fi akan terputus sementara selama kurang lebih 25 detik saat modem melakukan soft restart hardware dan pendaftaran ulang ke jaringan seluler.
+              Sambungan internet dan Wi-Fi akan terputus seketika selama lebih kurang 25 saat sementara modem memulakan semula perkakasan dan mendaftar semula ke rangkaian selular.
             </p>
 
             <div className="flex gap-3 justify-center">
@@ -51,7 +51,7 @@ export const RebootModal: React.FC<RebootModalProps> = ({
                 onClick={onCancel}
                 className="px-4 py-2.5 text-xs font-semibold text-slate-400 hover:text-white bg-slate-800 rounded-lg transition-colors flex-1"
               >
-                Batalkan
+                Batal
               </button>
               <button
                 type="button"
@@ -61,7 +61,7 @@ export const RebootModal: React.FC<RebootModalProps> = ({
                 }}
                 className="px-4 py-2.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 rounded-lg transition-colors flex-1"
               >
-                Ya, Reboot Sekarang
+                Ya, But Semula Sekarang
               </button>
             </div>
           </>
@@ -72,15 +72,15 @@ export const RebootModal: React.FC<RebootModalProps> = ({
             </div>
 
             <h3 className="text-lg font-bold text-white tracking-tight mb-1">
-              Modem Sedang Melakukan Restart...
+              Modem Sedang Melakukan But Semula...
             </h3>
 
             <p className="text-xs text-slate-400 mb-5">
-              Mohon tunggu, modem H809Pro sedang booting ulang firmware dan registrasi SIM.
+              Sila tunggu sebentar, modem H809Pro sedang memuat semula perisian tegar dan mendaftar kad SIM.
             </p>
 
             <div className="text-3xl font-bold font-mono text-cyan-400 mb-3 tabular-nums">
-              {countdown} <span className="text-sm font-normal text-slate-400">detik</span>
+              {countdown} <span className="text-sm font-normal text-slate-400">saat</span>
             </div>
 
             <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden mb-2">
@@ -97,18 +97,18 @@ export const RebootModal: React.FC<RebootModalProps> = ({
             </div>
 
             <h3 className="text-lg font-bold text-white tracking-tight mb-1">
-              Reboot Selesai!
+              But Semula Selesai!
             </h3>
 
             <p className="text-xs text-slate-400 mb-6">
-              Modem H809Pro telah kembali online dan jaringan 4G LTE telah terhubung normal.
+              Modem H809Pro telah kembali dalam talian dan rangkaian 4G LTE telah bersambung dengan lancar.
             </p>
 
             <button
               onClick={onCancel}
               className="w-full py-2.5 text-xs font-bold text-slate-950 bg-cyan-400 hover:bg-cyan-300 rounded-lg transition-colors"
             >
-              Kembali ke Dasbor
+              Kembali ke Papan Pemuka
             </button>
           </>
         )}

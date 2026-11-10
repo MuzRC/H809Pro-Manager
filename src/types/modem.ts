@@ -75,10 +75,36 @@ export interface ATCommandLog {
   status: 'success' | 'error';
 }
 
+export interface ChargingHistoryItem {
+  id: string;
+  timestamp: string;
+  eventType: 'CHARGING_STARTED' | 'CHARGING_COMPLETED' | 'BYPASS_ENGAGED' | 'DISCHARGING' | 'TRICKLE_MAINTENANCE';
+  startLevel: number;
+  endLevel: number;
+  durationMinutes: number;
+  peakTemperature: number;
+  healthImpact: string;
+  voltageV: number;
+}
+
+export interface BatteryHealthInfo {
+  stateOfHealthPercent: number; // e.g. 94%
+  designCapacityMah: number; // 3000 mAh
+  currentFullCapacityMah: number; // 2820 mAh
+  completedCycles: number; // 142
+  ratedMaxCycles: number; // 500
+  estimatedRemainingCycles: number; // 358
+  voltageV: number; // 4.12 V
+  currentRateMa: number; // +850 mA or 0
+  batteryTemperature: number; // 31.8 C
+  condition: 'EXCELLENT' | 'GOOD' | 'FAIR' | 'REPLACE_SOON';
+  bypassModeActive: boolean;
+  history: ChargingHistoryItem[];
+}
+
 export interface ModemStatus {
   gatewayIp: string;
   isConnected: boolean;
-  connectionMode: 'live' | 'simulated';
   simStatus: 'READY' | 'NO_SIM' | 'PIN_REQUIRED';
   operator: OperatorInfo;
   networkType: '4G LTE' | '3G HSPA+' | 'No Service';
@@ -92,6 +118,7 @@ export interface ModemStatus {
   temperature: number; // Celsius
   batteryStatus: 'BYPASS_DIRECT_POWER' | 'BATTERY_CHARGING' | 'BATTERY_FULL';
   batteryLevel: number; // %
+  batteryHealth?: BatteryHealthInfo;
   uptimeSeconds: number;
   wifiSsid: string;
   wifiSecurity: string;

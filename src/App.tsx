@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { WifiOff, RefreshCw, ExternalLink, Settings, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { Navbar } from './components/Navbar';
 import { OverviewTab } from './components/OverviewTab';
 import { BandLockTab } from './components/BandLockTab';
@@ -30,6 +31,12 @@ export default function App() {
   const [isGatewayModalOpen, setIsGatewayModalOpen] = useState(false);
   const [isRebootModalOpen, setIsRebootModalOpen] = useState(false);
   const [isRebooting, setIsRebooting] = useState(false);
+  const [isRetryingConnection, setIsRetryingConnection] = useState(false);
+
+  // Status pengesahan Wi-Fi daripada pengguna (mengatasi sekatan Mixed Content pelayar)
+  const [hasUserConfirmedWifi, setHasUserConfirmedWifi] = useState<boolean>(() => {
+    return localStorage.getItem('h809pro_confirmed_wifi') === 'true';
+  });
 
   // Status Modem
   const [status, setStatus] = useState<ModemStatus>(() => {
@@ -44,7 +51,6 @@ export default function App() {
     return {
       gatewayIp: '192.168.1.1',
       isConnected: false,
-      connectionMode: 'live',
       simStatus: 'READY',
       operator: MALAYSIAN_OPERATORS[0],
       networkType: '4G LTE',
@@ -78,7 +84,7 @@ export default function App() {
       maxClients: 10,
       imei: '868940051283941',
       macAddress: '7C:B0:C2:59:E4:10',
-      firmwareVersion: 'H809PRO_V4.2.1_LIVE',
+      firmwareVersion: 'H809PRO_V4.2.1_CGI',
       hardwareVersion: 'H809-PCB-V2.0',
     };
   });
@@ -118,8 +124,8 @@ export default function App() {
   const [atLogs, setAtLogs] = useState<ATCommandLog[]>([
     {
       id: 'cmd-init',
-      command: 'ATI',
-      response: 'Modem H809Pro Bersambung.\nPengilang: ASR Microelectronics\nStatus: SEDIA',
+      command: '/cgi-bin/qcmap_web_cgi (Inisialisasi)',
+      response: 'Modem H809Pro Sedia.\nProtokol CGI-BIN Aktif: /cgi-bin/qcmap_web_cgi & /cgi-bin/enode.cgi\nGet Laluan: 192.168.1.1',
       timestamp: new Date().toLocaleTimeString('ms-MY'),
       status: 'success',
     },
@@ -130,12 +136,12 @@ export default function App() {
     h809proApi.setGatewayIp(status.gatewayIp);
   }, [status.gatewayIp]);
 
-  // Polling Langsung: Ambil Isyarat & Maklumat daripada Modem Sebenar
+  // Polling Langsung: Ambil Isyarat & Maklumat daripada Modem Sebenar melalui cgi-bin
   const refreshLiveTelemetry = useCallback(async () => {
     if (isRebooting) return;
 
     const isAlive = await h809proApi.pingGateway();
-    if (!isAlive && status.connectionMode === 'live') {
+    if (!isAlive && !hasUserConfirmedWifi) {
       setStatus((prev) => ({ ...prev, isConnected: false }));
       return;
     }
@@ -147,7 +153,7 @@ export default function App() {
       isConnected: true,
       uptimeSeconds: prev.uptimeSeconds + 3,
     }));
-  }, [isRebooting, status.connectionMode]);
+  }, [isRebooting, hasUserConfirmedWifi]);
 
   useEffect(() => {
     refreshLiveTelemetry();
@@ -168,7 +174,16 @@ export default function App() {
     localStorage.setItem('h809pro_apn', JSON.stringify(apnProfiles));
   }, [apnProfiles]);
 
-  // Kunci Jalur Sebenar
+  const handleConfirmWifi = (confirmed: boolean) => {
+    setHasUserConfirmedWifi(confirmed);
+    localStorage.setItem('h809pro_confirmed_wifi', String(confirmed));
+    if (confirmed) {
+      setStatus((prev) => ({ ...prev, isConnected: true }));
+      refreshLiveTelemetry();
+    }
+  };
+
+  // Kunci Jalur Sebenar melalui cgi-bin
   const handleApplyBandConfig = async (bands: number[], mode: NetworkMode) => {
     const success = await h809proApi.applyBandLock(bands, mode);
     const timeStr = new Date().toLocaleTimeString('ms-MY');
@@ -183,9 +198,9 @@ export default function App() {
       ...prev,
       {
         id: `cmd-${Date.now()}`,
-        command: `AT^SETBAND=${bands.join(',')},MODE=${mode}`,
+        command: `[CGI-BIN] enode.cgi?action=lock_band&bands=${bands.join(',')}&mode=${mode}`,
         response: success
-          ? `+SETBAND: JALUR BERJAYA DIKUNCI=[${bands.join(',')}]\nOK`
+          ? `+SETBAND: JALUR BERJAYA DIKUNCI=[${bands.join(',')}]\nCGI Response: OK`
           : `RALAT: Modem gagal menetapkan jalur frekuensi`,
         timestamp: timeStr,
         status: success ? 'success' : 'error',
@@ -195,10 +210,18 @@ export default function App() {
     refreshLiveTelemetry();
   };
 
-  // Pelaksana Arahan AT Sebenar
+  // Pelaksana Arahan AT & Skrip CGI-BIN Sebenar
   const handleExecuteATCommand = async (rawCmd: string) => {
     const timeStr = new Date().toLocaleTimeString('ms-MY');
-    const response = await h809proApi.executeATCommand(rawCmd);
+    let response = '';
+
+    if (rawCmd.startsWith('/cgi-bin/') || rawCmd.startsWith('cgi-bin/')) {
+      const endpoint = rawCmd.startsWith('/') ? rawCmd : `/${rawCmd}`;
+      const [path, query] = endpoint.split('?');
+      response = await h809proApi.sendCgiRequest(path, query || {}, 'GET');
+    } else {
+      response = await h809proApi.executeATCommand(rawCmd);
+    }
 
     setAtLogs((prev) => [
       ...prev,
@@ -294,8 +317,17 @@ export default function App() {
       localStorage.removeItem('h809pro_status');
       localStorage.removeItem('h809pro_sms');
       localStorage.removeItem('h809pro_apn');
+      localStorage.removeItem('h809pro_confirmed_wifi');
       window.location.reload();
     }
+  };
+
+  const handleManualRetry = async () => {
+    setIsRetryingConnection(true);
+    await refreshLiveTelemetry();
+    setTimeout(() => {
+      setIsRetryingConnection(false);
+    }, 800);
   };
 
   return (
@@ -313,10 +345,85 @@ export default function App() {
         rsrp={status.signal.rsrp}
       />
 
-      {/* Amaran Jika Wi-Fi Modem Belum Bersambung */}
-      {!status.isConnected && (
-        <div className="bg-amber-950/80 border-b border-amber-800 px-4 py-2 text-center text-xs text-amber-200 font-mono">
-          Perhatian: Tidak dapat berhubung dengan modem di http://{status.gatewayIp}. Sila pastikan telefon anda telah menyambung ke Wi-Fi modem H809Pro.
+      {/* Kad Amaran Jika Wi-Fi Modem Belum Dikesan Secara Automatik */}
+      {!status.isConnected && !hasUserConfirmedWifi && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 w-full">
+          <div className="bg-amber-950/70 border border-amber-800/80 rounded-xl p-4 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 shadow-lg">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-amber-900/40 text-amber-400 shrink-0 mt-0.5">
+                <WifiOff className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-sm font-bold text-amber-200 font-mono flex items-center gap-2">
+                  <span>Sambungan Modem H809Pro (CGI-BIN)</span>
+                  <span className="text-[11px] text-amber-400/80 bg-amber-900/50 px-2 py-0.5 rounded font-normal">
+                    http://{status.gatewayIp}/cgi-bin/
+                  </span>
+                </div>
+                <p className="text-xs text-amber-300/80 mt-1 leading-relaxed">
+                  Pelayar web mungkin menyekat komunikasi latar belakang ke IP peribadi 192.168.1.1. Jika telefon anda telah disambungkan ke hotspot Wi-Fi modem, klik butang <strong>"Saya Sudah Bersambung"</strong> di sebelah untuk membuka papan pemuka serta-merta.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 shrink-0 w-full lg:w-auto">
+              <button
+                onClick={() => handleConfirmWifi(true)}
+                className="flex-1 sm:flex-none px-4 py-2 text-xs font-bold text-slate-950 bg-emerald-400 hover:bg-emerald-300 rounded-lg transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap shadow-sm"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Saya Sudah Bersambung (Buka Penuh)</span>
+              </button>
+
+              <button
+                onClick={handleManualRetry}
+                disabled={isRetryingConnection}
+                className="px-3 py-2 text-xs font-semibold text-amber-200 hover:text-white bg-amber-900/50 hover:bg-amber-900/80 border border-amber-700/60 rounded-lg transition-colors flex items-center gap-1.5 whitespace-nowrap disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isRetryingConnection ? 'animate-spin' : ''}`} />
+                <span>{isRetryingConnection ? 'Memeriksa...' : 'Uji Sambungan'}</span>
+              </button>
+
+              <a
+                href={`http://${status.gatewayIp}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-2 text-xs font-semibold text-amber-200 hover:text-white bg-amber-900/40 hover:bg-amber-900/70 border border-amber-800/80 rounded-lg transition-colors flex items-center gap-1.5 whitespace-nowrap"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span>Buka WebGUI Asal</span>
+              </a>
+
+              <button
+                onClick={() => setIsGatewayModalOpen(true)}
+                className="px-2.5 py-2 text-xs text-amber-300/80 hover:text-white bg-amber-950/60 border border-amber-800/80 rounded-lg transition-colors"
+                title="Tukar Alamat IP Get Laluan & Endpoint CGI"
+              >
+                <Settings className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Kad Penunjuk Apabila Wi-Fi Telah Disahkan */}
+      {hasUserConfirmedWifi && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 w-full">
+          <div className="bg-cyan-950/40 border border-cyan-800/60 rounded-lg px-3.5 py-2 flex items-center justify-between text-xs font-mono text-cyan-300">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-cyan-400" />
+              <span>
+                Mod Sambungan Wi-Fi Disahkan Aktif (Protokol Perkakasan PXA1802 Modul Duster)
+              </span>
+            </div>
+
+            <button
+              onClick={() => handleConfirmWifi(false)}
+              className="text-[11px] text-cyan-400 hover:text-cyan-200 underline transition-colors"
+            >
+              Semak Semula Sambungan
+            </button>
+          </div>
         </div>
       )}
 
@@ -395,7 +502,7 @@ export default function App() {
         )}
       </main>
 
-      {/* Modal Get Laluan IP */}
+      {/* Modal Get Laluan IP & CGI-BIN */}
       <GatewayModal
         isOpen={isGatewayModalOpen}
         onClose={() => setIsGatewayModalOpen(false)}
@@ -403,10 +510,8 @@ export default function App() {
         onSaveGatewayIp={(newIp) =>
           setStatus((prev) => ({ ...prev, gatewayIp: newIp }))
         }
-        connectionMode={status.connectionMode}
-        onChangeConnectionMode={(newMode) =>
-          setStatus((prev) => ({ ...prev, connectionMode: newMode }))
-        }
+        hasUserConfirmedWifi={hasUserConfirmedWifi}
+        onToggleConfirmWifi={handleConfirmWifi}
       />
 
       {/* Modal But Semula */}
@@ -421,14 +526,26 @@ export default function App() {
       <footer className="border-t border-slate-900 bg-slate-950 py-4 text-xs font-mono text-slate-500">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2">
           <div>
-            <span>Pengurus CPE 4G LTE H809Pro (Live)</span>
+            <span>Pengurus CPE 4G LTE H809Pro (CGI-BIN Live)</span>
             <span className="mx-2">·</span>
             <span>Get Laluan: http://{status.gatewayIp}</span>
           </div>
           <div>
             <span>Status Perkakasan: </span>
-            <span className={status.isConnected ? 'text-emerald-400' : 'text-rose-400'}>
-              {status.isConnected ? 'Bersambung ke Modem' : 'Tiada Sambungan'}
+            <span
+              className={
+                status.isConnected
+                  ? 'text-emerald-400'
+                  : hasUserConfirmedWifi
+                  ? 'text-cyan-400'
+                  : 'text-rose-400'
+              }
+            >
+              {status.isConnected
+                ? 'Bersambung (CGI-BIN Aktif)'
+                : hasUserConfirmedWifi
+                ? 'Wi-Fi Disahkan (CGI-BIN Langsung)'
+                : 'Tiada Sambungan'}
             </span>
           </div>
         </div>
