@@ -167,7 +167,7 @@ class H809ProApiService {
   private gnCount: number = 1;
 
   public setGatewayIp(ip: string) {
-    this.gatewayIp = ip;
+    this.gatewayIp = ip.replace(/^https?:\/\//, '').replace(/\/.*$/, '').trim();
   }
 
   public getGatewayIp(): string {
@@ -195,13 +195,8 @@ class H809ProApiService {
     return '/xml_action.cgi?module=duster&file=customconfig';
   }
 
-  public setPrimaryCgiEndpoint(_endpoint: string) {
-    // Sesuai bagi keserasian UI modal get laluan
-  }
-
-  public setEnodeCgiEndpoint(_endpoint: string) {
-    // Sesuai bagi keserasian UI modal get laluan
-  }
+  public setPrimaryCgiEndpoint(_endpoint: string) {}
+  public setEnodeCgiEndpoint(_endpoint: string) {}
 
   public async testCgiEndpoint(_endpointPath?: string): Promise<{
     success: boolean;
@@ -439,12 +434,10 @@ class H809ProApiService {
 
   // --- 6. PENGURUSAN SMS (FILE=MESSAGE DENGAN UNIENCODE/UNIDECODE) ---
   public async fetchSMSInbox(): Promise<SMSMessage[]> {
-    // 1. Minta modul sediakan senarai SMS dari simpanan lokal
     const preparePayload =
       '<RGW><message><flag><message_flag>GET_RCV_SMS_LOCAL</message_flag></flag><get_message><page_number>1</page_number></get_message></message></RGW>';
     await this.postModuleXml('message', preparePayload);
 
-    // 2. Tarik XML senarai mesej sebenar
     const smsXml = await this.getModuleXml('message');
     if (!smsXml) return [];
 
@@ -526,22 +519,28 @@ class H809ProApiService {
     return await this.postModuleXml('customconfig', lockPayload);
   }
 
-  // --- 8. BUT SEMULA PERKAKASAN & ARAHAN SISTEM ---
+  // --- 8. BUT SEMULA PERKAKASAN (SELAMAT - TANPA FORMAT KILANG) ---
   public async rebootModem(): Promise<boolean> {
     try {
-      const res: HttpResponse = await CapacitorHttp.get({
-        url: `http://${this.gatewayIp}/xml_action.cgi?method=get&file=restore_defaults&command=reboot`,
-        headers: {
-          Authorization: this.generateAuthHeader('GET'),
-        },
-        connectTimeout: 3000,
-      });
-      return res.status === 200;
+      // Guna arahan AT selamat bagi cipset PXA1802 untuk memulakan semula perkakasan
+      const res = await this.executeATCommand('AT+CFUN=1,1');
+      if (res.includes('OK')) return true;
+
+      const resReset = await this.executeATCommand('AT+RESET');
+      return resReset.includes('OK');
     } catch {
       return false;
     }
   }
 
+  // --- 9. DAIL KOD USSD ---
+  public async dialUSSD(code: string): Promise<string> {
+    const rawResult = await this.executeATCommand(`AT+CUSD=1,"${code}",15`);
+    const match = rawResult.match(/"([^"]+)"/);
+    return match ? match[1] : rawResult;
+  }
+
+  // --- 10. PELAKSANA ARAHAN AT MODUL DUSTER ---
   public async executeATCommand(command: string): Promise<string> {
     const cleanCmd = encodeURIComponent(command.trim());
     try {
